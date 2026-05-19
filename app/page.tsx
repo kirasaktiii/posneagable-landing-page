@@ -187,10 +187,10 @@ export default function LandingPage() {
             Neagable Sweet Treats 🍪
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] tracking-tight text-[#442f2a] font-serif">
-            Artisan Pastries <br className="hidden sm:block" /> <span className="text-[#442f2a]">& Cookies Lumer</span>
+            Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#442f2a]">& Dessert</span>
           </h2>
-          <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2">
-            Pilihan manis buat harimu! Mulai dari brownies lumer, soft cookies, chewy kuki dubai, sampai aneka pastry lezat yang siap menemani waktu santaimu.
+          <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2 capitalize">
+            Made by order & freshly baked
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <a href="#catalog" className="px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-full font-bold text-base hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95">
