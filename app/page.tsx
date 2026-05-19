@@ -174,7 +174,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-white pt-24 pb-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white to-[#f3a0aa]/30 pt-24 pb-32">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] brightness-100 contrast-150"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-40 bg-gradient-to-b from-amber-200 via-orange-200 to-transparent blur-[120px] rounded-full pointer-events-none"></div>
         
@@ -187,7 +187,7 @@ export default function LandingPage() {
             Neagable Sweet Treats 🍪
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] tracking-tight text-[#442f2a] font-serif">
-            Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#442f2a]">& Dessert</span>
+            Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#f790b2] drop-shadow-sm">& Dessert</span>
           </h2>
           <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2 capitalize">
             Made by order & freshly baked
@@ -206,8 +206,8 @@ export default function LandingPage() {
       {/* Catalog Section */}
       <section id="catalog" className="max-w-6xl mx-auto px-3 sm:px-6 py-12 sm:py-24 scroll-mt-20">
         <div className="text-center mb-16">
-          <h3 className="text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Menu Manisan Kami ✨</h3>
-          <p className="text-lg text-[#442f2a]/60 max-w-xl mx-auto font-medium">Pilih dessert favoritmu di bawah ini. Mumpung masih hangat dan fresh dari oven!</p>
+          <h3 className="text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Our Menu!!</h3>
+          <p className="text-lg text-[#442f2a]/60 max-w-xl mx-auto font-medium">Pilih dessert favoritmu di bawah ini</p>
         </div>
         
         {loading ? (
@@ -520,17 +520,17 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="bg-[#2a1c19] text-[#442f2a]/40 py-12 text-center border-t border-stone-800">
+      <footer className="bg-[#fff7ec] py-12 text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-center gap-3 mb-6 opacity-50">
+          <div className="flex items-center justify-center gap-3 mb-6">
             <img 
               src="/assets/icons/icon-1.png" 
               alt="Neagable Logo" 
-              className="w-10 h-10 object-contain grayscale" 
+              className="w-12 h-12 object-contain drop-shadow-sm" 
             />
-            <h2 className="text-2xl font-black text-[#fff7ec] tracking-tight">Neagable</h2>
+            <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Neagable</h2>
           </div>
-          <p className="font-medium text-sm text-[#fff7ec]/60">&copy; {new Date().getFullYear()} Neagable Landing Page. All rights reserved.</p>
+          <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Neagable Landing Page. All rights reserved.</p>
         </div>
       </footer>
     </div>
