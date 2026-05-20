@@ -55,7 +55,7 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [generatedWaUrl, setGeneratedWaUrl] = useState("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"do" | "cod">("do");
+  const [deliveryMethod, setDeliveryMethod] = useState<"do" | "cod" | "pickup">("do");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -180,7 +180,9 @@ export default function LandingPage() {
 
     const deliveryText = deliveryMethod === "do" 
       ? "DO (Delivery Order - pengiriman via kurir)"
-      : "COD (Ketemu di Indomaret Alun-Alun Mojokerto)";
+      : deliveryMethod === "cod"
+      ? "COD (Ketemu di Alun-Alun Mojokerto)"
+      : "Pick Up (Ambil di Tempat)";
 
     const waMessage = `Halo Admin, saya mau order & minta barcode QRIS:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n- Metode: ${deliveryText}\n\n*Pesanan:*\n${itemsText}\n\n*Total Tagihan: ${formatRupiah(total_price)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`;
 
@@ -524,67 +526,112 @@ export default function LandingPage() {
                     </h4>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* DO Option */}
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("do")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
                         deliveryMethod === "do"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
                       }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl">🚚</span>
-                        <span className="font-black text-lg">DO (Delivery Order)</span>
+                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🚚</span>
+                        <span className="font-black text-lg">Delivery Order (DO)</span>
                       </div>
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "do" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Pengiriman via kurir (Gosend, GrabExpress, dll). Biaya ongkir ditanggung customer.
+                        Pesan kurir secara mandiri & wajib share link live location kurir ke toko.
                       </p>
+                      {deliveryMethod === "do" && (
+                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "do" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
+                        </div>
+                      )}
                     </button>
 
                     {/* COD Option */}
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("cod")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
                         deliveryMethod === "cod"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
                       }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl">🤝</span>
-                        <span className="font-black text-lg">COD (Ambil Sendiri)</span>
+                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🤝</span>
+                        <span className="font-black text-lg">COD</span>
                       </div>
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "cod" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Ketemu di Indomaret Alun-Alun Kota Mojokerto
+                       Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB.
                       </p>
+                      {deliveryMethod === "cod" && (
+                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "cod" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Pick Up Option */}
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod("pickup")}
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
+                        deliveryMethod === "pickup"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🏪</span>
+                        <span className="font-black text-lg">Pick Up</span>
+                      </div>
+                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "pickup" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
+                        Ambil pesanan sendiri di tempat, pukul 09.00 – 15.00 WIB.
+                      </p>
+                      {deliveryMethod === "pickup" && (
+                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "pickup" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
+                        </div>
+                      )}
                     </button>
                   </div>
 
-                  {/* Info Detail berdasarkan pilihan */}
-                  {deliveryMethod === "cod" && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
-                      <span className="text-xl shrink-0">📌</span>
+                  {/* Info Detail berdasarkan pilihan — bahasa ramah ala asisten toko kue */}
+                  {deliveryMethod === "do" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
+                      <span className="text-xl shrink-0">📦</span>
                       <div>
-                        <p className="font-bold text-[#442f2a] text-sm mb-1">NB: Lokasi & Jam COD</p>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order (DO)</p>
                         <p className="text-[#442f2a]/70 text-sm leading-relaxed">
-                          Ketemu di <span className="font-bold">Indomaret Alun-Alun Kota Mojokerto</span><br/>
-                          Jam operasional: <span className="font-bold">09:00 AM - 03:00 PM</span>
+                          Hai Kak! Untuk metode DO, kamu perlu memesan kurir secara mandiri ya (bisa pakai Grab/Gojek/dll). Setelah kurir dijalan, <span className="font-bold text-[#442f2a]">wajib bagikan tautan (link) live location kurir</span> ke pihak toko supaya pesananmu bisa diserahkan ke kurir yang tepat. Terima kasih! 💕
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {deliveryMethod === "do" && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
-                      <span className="text-xl shrink-0">📦</span>
+                  {deliveryMethod === "cod" && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
+                      <span className="text-xl shrink-0">📌</span>
                       <div>
-                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order</p>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info (COD)</p>
                         <p className="text-[#442f2a]/70 text-sm leading-relaxed">
-                          Anda bisa menggunakan <span className="font-bold">Gosend, GrabExpress</span>, atau kurir pilihan Anda. Biaya pengiriman ditanggung customer. Lokasi pickup lihat di section peta di bawah.
+                          Hai Kak! Untuk metode COD, kita hanya bisa disatu titik saja, di <span className="font-bold text-[#442f2a]">Indomaret Alun-Alun Kota Mojokerto</span> ya. Jadwal COD beroperasi pada <span className="font-bold text-[#442f2a]">pukul 16:00-17:00 WIB</span>. Di luar jam tersebut, silakan pilih metode pengiriman lain ya! 🤗
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {deliveryMethod === "pickup" && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
+                      <span className="text-xl shrink-0">🏪</span>
+                      <div>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Pick Up (Ambil di Tempat)</p>
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                          Hai Kak! Kamu bisa langsung ambil pesanannya sendiri ke tempat kami ya. Jam operasional untuk pick up adalah dari <span className="font-bold text-[#442f2a]">pukul 09:00 WIB sampai 15:00 WIB</span>. Ditunggu kedatangannya! 🍪✨
                         </p>
                       </div>
                     </div>
@@ -878,8 +925,12 @@ export default function LandingPage() {
                             <span className="text-[#442f2a]/70 font-medium">{order.address}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
-                            <span className="text-[#442f2a]/40 shrink-0">{order.delivery_method === "cod" ? "🤝" : "🚚"}</span>
-                            <span className="text-[#442f2a]/70 font-medium">{order.delivery_method === "cod" ? "COD - Indomaret Alun-Alun Mojokerto" : "DO - Delivery Order"}</span>
+                            <span className="text-[#442f2a]/40 shrink-0">
+                              {order.delivery_method === "cod" ? "🤝" : order.delivery_method === "pickup" ? "🏪" : "🚚"}
+                            </span>
+                            <span className="text-[#442f2a]/70 font-medium">
+                              {order.delivery_method === "cod" ? "COD - Alun-Alun Mojokerto" : order.delivery_method === "pickup" ? "Pick Up - Ambil di Tempat" : "DO - Delivery Order"}
+                            </span>
                           </div>
                         </div>
 
