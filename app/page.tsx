@@ -247,7 +247,7 @@ export default function LandingPage() {
           <div className="flex items-center">
             <img 
               src="/assets/icons/icon-1.png" 
-              alt="Neagable Logo" 
+              alt="Naégable Logo" 
               className="h-14 md:h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" 
             />
           </div>
@@ -275,7 +275,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#f5cbd7]"></span>
             </span>
-            Neagable Sweet Treats 🍪
+            Naégable Sweet Treats 🍪
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] tracking-tight text-[#442f2a] font-serif">
             Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#f790b2] drop-shadow-sm">& Dessert</span>
@@ -488,7 +488,7 @@ export default function LandingPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
-                        placeholder="Contoh: Neagable"
+                        placeholder="Contoh: Naégable"
                       />
                     </div>
                     <div className="space-y-2">
@@ -531,24 +531,19 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("do")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
                         deliveryMethod === "do"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
                       }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🚚</span>
-                        <span className="font-black text-lg">Delivery Order (DO)</span>
+                        <span className="text-2xl">🚚</span>
+                        <span className="font-black text-lg">DO (Delivery Order)</span>
                       </div>
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "do" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Pesan kurir secara mandiri & wajib share link live location kurir ke toko.
+                        Pesan kurir mandiri. Wajib share live location kurir ke toko.
                       </p>
-                      {deliveryMethod === "do" && (
-                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "do" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
-                        </div>
-                      )}
                     </button>
 
                     {/* COD Option */}
@@ -566,10 +561,10 @@ export default function LandingPage() {
                         <span className="font-black text-lg">COD</span>
                       </div>
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "cod" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                       Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB.
+                        Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB.
                       </p>
                       {deliveryMethod === "cod" && (
-                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "cod" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
+                        <div className="mt-3 pt-3 border-t border-[#fff7ec]/20">
                           <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
                         </div>
                       )}
@@ -579,59 +574,54 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("pickup")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
                         deliveryMethod === "pickup"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
                       }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🏪</span>
+                        <span className="text-2xl">🏪</span>
                         <span className="font-black text-lg">Pick Up</span>
                       </div>
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "pickup" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Ambil pesanan sendiri di tempat, pukul 09.00 – 15.00 WIB.
+                        Ambil pesanan sendiri di tempat (09.00 - 15.00 WIB).
                       </p>
-                      {deliveryMethod === "pickup" && (
-                        <div className={`mt-3 pt-3 border-t ${deliveryMethod === "pickup" ? "border-[#fff7ec]/20" : "border-[#442f2a]/10"}`}>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
-                        </div>
-                      )}
                     </button>
                   </div>
 
-                  {/* Info Detail berdasarkan pilihan — bahasa ramah ala asisten toko kue */}
-                  {deliveryMethod === "do" && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
-                      <span className="text-xl shrink-0">📦</span>
+                  {/* Info Detail berdasarkan pilihan */}
+                  {deliveryMethod === "cod" && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
+                      <span className="text-xl shrink-0">📌</span>
                       <div>
-                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order (DO)</p>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info (COD)</p>
                         <p className="text-[#442f2a]/70 text-sm leading-relaxed">
-                          Hai Kak! Untuk metode DO, kamu perlu memesan kurir secara mandiri ya (bisa pakai Grab/Gojek/dll). Setelah kurir dijalan, <span className="font-bold text-[#442f2a]">wajib bagikan tautan (link) live location kurir</span> ke pihak toko supaya pesananmu bisa diserahkan ke kurir yang tepat. Terima kasih! 💕
+                          Hai Kak! Untuk metode COD, kita hanya bisa disatu titik saja, di <span className="font-bold">Indomaret Alun-Alun Kota Mojokerto</span> ya. Jadwal COD beroperasi pada <span className="font-bold">pukul 16:00-17:00 WIB</span>. Di luar jam tersebut, silakan pilih metode pengiriman lain ya! 🤗
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {deliveryMethod === "cod" && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
-                      <span className="text-xl shrink-0">📌</span>
+                  {deliveryMethod === "do" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
+                      <span className="text-xl shrink-0">📦</span>
                       <div>
-                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info (COD)</p>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order (DO)</p>
                         <p className="text-[#442f2a]/70 text-sm leading-relaxed">
-                          Hai Kak! Untuk metode COD, kita hanya bisa disatu titik saja, di <span className="font-bold text-[#442f2a]">Indomaret Alun-Alun Kota Mojokerto</span> ya. Jadwal COD beroperasi pada <span className="font-bold text-[#442f2a]">pukul 16:00-17:00 WIB</span>. Di luar jam tersebut, silakan pilih metode pengiriman lain ya! 🤗
+                          Anda harus memesan kurir secara mandiri. Mohon <span className="font-bold">wajib membagikan tautan (link) live location kurir</span> kepada pihak toko agar pesanan bisa diserahkan ke kurir yang tepat.
                         </p>
                       </div>
                     </div>
                   )}
 
                   {deliveryMethod === "pickup" && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start animate-[slideDown_0.3s_ease-out]">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
                       <span className="text-xl shrink-0">🏪</span>
                       <div>
                         <p className="font-bold text-[#442f2a] text-sm mb-1">Info Pick Up (Ambil di Tempat)</p>
                         <p className="text-[#442f2a]/70 text-sm leading-relaxed">
-                          Hai Kak! Kamu bisa langsung ambil pesanannya sendiri ke tempat kami ya. Jam operasional untuk pick up adalah dari <span className="font-bold text-[#442f2a]">pukul 09:00 WIB sampai 15:00 WIB</span>. Ditunggu kedatangannya! 🍪✨
+                          Anda bisa mengambil pesanannya sendiri. Jam operasional untuk pick up adalah dari pukul <span className="font-bold">09:00 WIB hingga 15:00 WIB</span>.
                         </p>
                       </div>
                     </div>
@@ -1002,7 +992,7 @@ export default function LandingPage() {
             </span>
             <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Lokasi DO (Delivery Order)</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
-              Titik pengambilan & pengiriman pesanan Neagable
+              Titik pengambilan & pengiriman pesanan Naégable
             </p>
           </div>
 
@@ -1022,7 +1012,7 @@ export default function LandingPage() {
               </div>
               <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Neagable</h4>
+                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Naégable</h4>
                   <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1042,9 +1032,9 @@ export default function LandingPage() {
                     type="button"
                     onClick={() => {
                       const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
-                      const shareText = "📍 Lokasi DO Neagable - Titik pengambilan pesanan:\n" + shareUrl;
+                      const shareText = "📍 Lokasi DO Naégable - Titik pengambilan pesanan:\n" + shareUrl;
                       if (navigator.share) {
-                        navigator.share({ title: "Lokasi DO Neagable", text: "📍 Titik pengambilan pesanan Neagable", url: shareUrl });
+                        navigator.share({ title: "Lokasi DO Naégable", text: "📍 Titik pengambilan pesanan Naégable", url: shareUrl });
                       } else {
                         navigator.clipboard.writeText(shareText);
                         alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
@@ -1070,12 +1060,12 @@ export default function LandingPage() {
           <div className="flex items-center justify-center gap-3 mb-6">
             <img 
               src="/assets/icons/icon-1.png" 
-              alt="Neagable Logo" 
+              alt="Naégable Logo" 
               className="w-12 h-12 object-contain drop-shadow-sm" 
             />
-            <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Neagable</h2>
+            <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Naégable</h2>
           </div>
-          <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Neagable Landing Page. All rights reserved.</p>
+          <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Naégable Landing Page. All rights reserved.</p>
         </div>
       </footer>
     </div>
