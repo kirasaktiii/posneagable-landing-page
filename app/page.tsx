@@ -19,8 +19,8 @@ interface Product {
   name: string;
   price: number;
   stock: number;
-  category_id?: string;
-  categories?: { name: string };
+  category_id?: any;
+  categories?: any;
 }
 
 interface CartItem {
@@ -86,7 +86,7 @@ export default function LandingPage() {
       if (error) {
         console.error("Error fetching products:", error);
       } else {
-        setProducts(data || []);
+        setProducts((data as any) || []);
       }
       setLoading(false);
     };
