@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase credentials (Hardcoded agar instan)
@@ -9,11 +9,18 @@ const SUPABASE_ANON_KEY = "sb_publishable_YwKLp-iU1krV6AwWvAjxvA_rarL3gkT";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
+  category_id?: string;
+  categories?: { name: string };
 }
 
 interface CartItem {
@@ -21,8 +28,23 @@ interface CartItem {
   qty: number;
 }
 
+interface OrderResult {
+  id: string;
+  customer_name: string;
+  wa_number: string;
+  address: string;
+  items: { name: string; qty: number; price: number }[];
+  total_qty: number;
+  total_price: number;
+  payment_status: string;
+  production_status: string;
+  delivery_method: string;
+  created_at: string;
+}
+
 export default function LandingPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -33,13 +55,32 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [generatedWaUrl, setGeneratedWaUrl] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"do" | "cod">("do");
+  const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Order Lookup State
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupResults, setLookupResults] = useState<OrderResult[]>([]);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      // Ambil data dari tabel products (id, name, price, stock)
+    const fetchData = async () => {
+      // Ambil categories
+      const { data: catData } = await supabase
+        .from("categories")
+        .select("id, name")
+        .order("name", { ascending: true });
+
+      if (catData) setCategories(catData);
+
+      // Ambil products dengan relasi ke categories
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, stock")
+        .select("id, name, price, stock, category_id, categories(name)")
         .order("name", { ascending: true });
 
       if (error) {
@@ -50,7 +91,7 @@ export default function LandingPage() {
       setLoading(false);
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
   const formatRupiah = (number: number) => {
@@ -74,9 +115,6 @@ export default function LandingPage() {
       }
       return [...prev, { product, qty: 1 }];
     });
-
-    // Otomatis scroll ke form
-    document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Update jumlah item di keranjang
@@ -117,6 +155,7 @@ export default function LandingPage() {
       })),
       total_qty,
       total_price,
+      delivery_method: deliveryMethod,
       payment_status: "unpaid",
       production_status: "pending",
     };
@@ -139,8 +178,11 @@ export default function LandingPage() {
       .map((item) => `- ${item.product.name} x${item.qty} = ${formatRupiah(item.product.price * item.qty)}`)
       .join("\n");
 
-    // Pesan WA yang mencakup format JSON agar mudah disalin admin ke aplikasi Flutter
-    const waMessage = `Halo Admin, saya mau order:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n\n*Pesanan:*\n${itemsText}\n\n*Total Tagihan: ${formatRupiah(total_price)}*\n\n---\n*Format JSON (Salin dan Input ke APK):*\n\`\`\`\n${JSON.stringify(orderData, null, 2)}\n\`\`\``;
+    const deliveryText = deliveryMethod === "do" 
+      ? "DO (Delivery Order - pengiriman via kurir)"
+      : "COD (Ketemu di Indomaret Alun-Alun Mojokerto)";
+
+    const waMessage = `Halo Admin, saya mau order & minta barcode QRIS:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n- Metode: ${deliveryText}\n\n*Pesanan:*\n${itemsText}\n\n*Total Tagihan: ${formatRupiah(total_price)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`;
 
     const waUrl = `https://wa.me/${adminPhoneNumber}?text=${encodeURIComponent(waMessage)}`;
     
@@ -152,7 +194,47 @@ export default function LandingPage() {
     setWaNumber("");
     setAddress("");
     setCart([]);
+    setDeliveryMethod("do");
     setIsSubmitting(false);
+  };
+
+  // Order Lookup
+  const handleLookup = async () => {
+    if (!lookupQuery.trim()) return;
+    setIsLookingUp(true);
+    setHasSearched(true);
+
+    const query = lookupQuery.trim();
+    
+    try {
+      // Search by name
+      const { data: byName } = await supabase
+        .from("po_orders")
+        .select("*")
+        .ilike("customer_name", `%${query}%`)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      // Search by phone
+      const { data: byPhone } = await supabase
+        .from("po_orders")
+        .select("*")
+        .ilike("wa_number", `%${query}%`)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      // Combine & deduplicate
+      const combined = [...(byName || []), ...(byPhone || [])];
+      const unique = combined.filter((order, index, self) => 
+        index === self.findIndex(o => o.id === order.id)
+      );
+      
+      setLookupResults(unique);
+    } catch (err) {
+      console.error("Lookup error:", err);
+      setLookupResults([]);
+    }
+    setIsLookingUp(false);
   };
 
   return (
@@ -167,9 +249,16 @@ export default function LandingPage() {
               className="h-14 md:h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" 
             />
           </div>
-          <a href="#order-form" className="bg-[#f5cbd7] text-[#442f2a] px-4 py-2 rounded-full font-bold text-sm hover:bg-[#eeb1c3] border border-[#442f2a] shadow-sm transition-all active:scale-95">
-            Keranjang ({total_qty})
-          </a>
+          <button onClick={() => document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" })} className="relative bg-[#f5cbd7] text-[#442f2a] p-2.5 rounded-xl hover:bg-[#eeb1c3] border border-[#442f2a] shadow-sm transition-all active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+            </svg>
+            {total_qty > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-[#442f2a] text-[#fff7ec] text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-md">
+                {total_qty}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -193,21 +282,100 @@ export default function LandingPage() {
             Made by order & freshly baked
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <a href="#catalog" className="px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-full font-bold text-base hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95">
+            <button onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })} className="px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-full font-bold text-base hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95">
               Lihat Katalog
-            </a>
-            <a href="#order-form" className="px-6 py-3 bg-transparent text-[#442f2a] border border-[#442f2a] rounded-full font-bold text-base hover:bg-[#f5cbd7] transition-all active:scale-95">
+            </button>
+            <button onClick={() => document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" })} className="px-6 py-3 bg-transparent text-[#442f2a] border border-[#442f2a] rounded-full font-bold text-base hover:bg-[#f5cbd7] transition-all active:scale-95">
               Lihat Keranjang
-            </a>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Catalog Section */}
       <section id="catalog" className="max-w-6xl mx-auto px-3 sm:px-6 py-12 sm:py-24 scroll-mt-20">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <h3 className="text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Our Menu!!</h3>
           <p className="text-lg text-[#442f2a]/60 max-w-xl mx-auto font-medium">Pilih dessert favoritmu di bawah ini</p>
+        </div>
+
+        {/* Category Filter & Search */}
+        <div className="mb-8 sm:mb-12">
+          <div className="flex items-center justify-between gap-3 mb-0">
+            {/* Category Tabs */}
+            <div className="flex-1 overflow-x-auto scrollbar-hide">
+              <div className="flex gap-2 pb-2">
+                {["Semua", ...categories.map(c => c.name)].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 border ${
+                      selectedCategory === cat
+                        ? "bg-[#442f2a] text-[#fff7ec] border-[#442f2a] shadow-md"
+                        : "bg-white text-[#442f2a]/70 border-[#442f2a]/15 hover:bg-[#f5cbd7]/40 hover:border-[#442f2a]/30"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSearchOpen(!isSearchOpen);
+                if (!isSearchOpen) {
+                  setTimeout(() => searchInputRef.current?.focus(), 300);
+                } else {
+                  setSearchQuery("");
+                }
+              }}
+              className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-95 border ${
+                isSearchOpen
+                  ? "bg-[#442f2a] text-[#fff7ec] border-[#442f2a] shadow-md"
+                  : "bg-white text-[#442f2a]/60 border-[#442f2a]/15 hover:bg-[#f5cbd7]/40 hover:border-[#442f2a]/30"
+              }`}
+              title="Cari produk"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Search Input - Animated */}
+          {isSearchOpen && (
+            <div className="mt-3 animate-[slideDown_0.3s_ease-out]">
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#442f2a]/40">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari nama produk..."
+                  className="w-full pl-12 pr-10 py-3 rounded-xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-white font-medium placeholder:text-[#442f2a]/40 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#442f2a]/40 hover:text-[#442f2a] transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         
         {loading ? (
@@ -217,7 +385,14 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-8">
-            {products.map((product) => {
+            {products
+              .filter((product) => {
+                const productCategoryName = product.categories?.name || "Lainnya";
+                const matchCategory = selectedCategory === "Semua" || productCategoryName === selectedCategory;
+                const matchSearch = searchQuery === "" || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchCategory && matchSearch;
+              })
+              .map((product) => {
               const isSelected = cart.some(item => item.product.id === product.id);
               return (
               <div key={product.id} className={`group bg-white rounded-2xl sm:rounded-3xl shadow-sm border ${isSelected ? 'border-[#442f2a] ring-2 ring-[#442f2a]/30 shadow-[#f5cbd7]/30' : 'border-[#442f2a]/20'} overflow-hidden hover:shadow-2xl hover:shadow-[#f5cbd7]/20 hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 flex flex-col relative`}>
@@ -340,10 +515,86 @@ export default function LandingPage() {
                   </div>
                 </div>
 
+                {/* Metode Pengiriman */}
+                <div className="space-y-6 sm:space-y-8 pt-2">
+                  <div className="flex items-center gap-4 border-b border-[#442f2a]/10 pb-4">
+                    <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-lg shadow-lg shadow-orange-500/30">2</span>
+                    <h4 className="text-xl sm:text-2xl font-black text-[#442f2a] tracking-tight">
+                      Metode Pengiriman
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* DO Option */}
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod("do")}
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                        deliveryMethod === "do"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl">🚚</span>
+                        <span className="font-black text-lg">DO (Delivery Order)</span>
+                      </div>
+                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "do" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
+                        Pengiriman via kurir (Gosend, GrabExpress, dll). Biaya ongkir ditanggung customer.
+                      </p>
+                    </button>
+
+                    {/* COD Option */}
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod("cod")}
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
+                        deliveryMethod === "cod"
+                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
+                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl">🤝</span>
+                        <span className="font-black text-lg">COD (Ambil Sendiri)</span>
+                      </div>
+                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "cod" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
+                        Ketemu di Indomaret Alun-Alun Kota Mojokerto
+                      </p>
+                    </button>
+                  </div>
+
+                  {/* Info Detail berdasarkan pilihan */}
+                  {deliveryMethod === "cod" && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
+                      <span className="text-xl shrink-0">📌</span>
+                      <div>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">NB: Lokasi & Jam COD</p>
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                          Ketemu di <span className="font-bold">Indomaret Alun-Alun Kota Mojokerto</span><br/>
+                          Jam operasional: <span className="font-bold">09:00 AM - 03:00 PM</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {deliveryMethod === "do" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
+                      <span className="text-xl shrink-0">📦</span>
+                      <div>
+                        <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order</p>
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                          Anda bisa menggunakan <span className="font-bold">Gosend, GrabExpress</span>, atau kurir pilihan Anda. Biaya pengiriman ditanggung customer. Lokasi pickup lihat di section peta di bawah.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Detail Pesanan Keranjang */}
                 <div className="space-y-6 sm:space-y-8 pt-2">
                   <div className="flex items-center gap-4 border-b border-[#442f2a]/10 pb-4">
-                    <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-white flex items-center justify-center font-black text-lg shadow-lg shadow-stone-900/20">2</span>
+                    <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-white flex items-center justify-center font-black text-lg shadow-lg shadow-stone-900/20">3</span>
                     <h4 className="text-xl sm:text-2xl font-black text-[#442f2a] tracking-tight">
                       Keranjang Pesanan
                     </h4>
@@ -353,9 +604,9 @@ export default function LandingPage() {
                     <div className="text-center py-12 px-6 bg-[#fff7ec] rounded-[2rem] border-2 border-dashed border-[#442f2a]/20">
                       <div className="text-4xl mb-3">🛒</div>
                       <p className="text-[#442f2a]/60 font-medium mb-4 text-sm sm:text-base">Keranjang pesananmu masih kosong nih.</p>
-                      <a href="#catalog" className="inline-flex items-center justify-center bg-white border border-[#442f2a]/20 px-6 sm:px-8 py-3 rounded-xl text-[#442f2a]/90 font-bold hover:bg-[#fff7ec] transition-colors shadow-sm text-sm sm:text-base active:scale-95">
+                      <button onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })} className="inline-flex items-center justify-center bg-white border border-[#442f2a]/20 px-6 sm:px-8 py-3 rounded-xl text-[#442f2a]/90 font-bold hover:bg-[#fff7ec] transition-colors shadow-sm text-sm sm:text-base active:scale-95">
                         Lihat Katalog Menu
-                      </a>
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-3 sm:space-y-4">
@@ -485,32 +736,47 @@ export default function LandingPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#442f2a]/60 backdrop-blur-sm" onClick={() => setShowSuccessPopup(false)}></div>
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div className="bg-[#f5cbd7] h-32 flex items-center justify-center relative">
+            <div className="bg-gradient-to-r from-[#f5cbd7] to-[#f790b2] h-32 flex items-center justify-center relative">
               <div className="absolute -bottom-8 w-16 h-16 bg-[#fff7ec] rounded-full flex items-center justify-center shadow-lg border-2 border-[#442f2a]/10">
-                <span className="text-2xl">🎉</span>
+                <span className="text-2xl">✅</span>
               </div>
             </div>
-            <div className="pt-12 pb-8 px-8 text-center">
-              <h3 className="text-2xl font-black text-[#442f2a] mb-2 font-serif">Pesanan Berhasil! 🎉</h3>
-              <p className="text-[#442f2a]/60 font-medium mb-8 leading-relaxed">
-                Terima kasih telah memesan. Silakan hubungi admin kami via WhatsApp untuk menanyakan pesanan dan instruksi pembayaran.
+            <div className="pt-12 pb-8 px-6 sm:px-8 text-center">
+              <h3 className="text-2xl font-black text-[#442f2a] mb-2 font-serif">Pesanan Tersimpan! 🎉</h3>
+              <p className="text-[#442f2a]/60 font-medium mb-6 leading-relaxed text-sm">
+                Pesanan Anda sudah tersimpan. Silakan minta barcode QRIS ke admin untuk pembayaran.
               </p>
-              
+
+              {/* Tombol Minta QRIS */}
               <a 
                 href={generatedWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => setShowSuccessPopup(false)}
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-[#fff7ec] shadow-xl bg-[#442f2a] hover:bg-[#2e1d1a] hover:-translate-y-1 hover:shadow-[#442f2a]/30 active:scale-95 transition-all mb-3"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                 </svg>
-                Hubungi Admin di WhatsApp
+                Minta Barcode QRIS
               </a>
+
+              {/* Tombol Cek Pesanan */}
+              <button 
+                onClick={() => {
+                  setShowSuccessPopup(false);
+                  setTimeout(() => document.getElementById("order-lookup")?.scrollIntoView({ behavior: "smooth" }), 300);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-[#442f2a] bg-[#fff7ec] border border-[#442f2a]/20 hover:bg-[#f5cbd7]/30 active:scale-95 transition-all mb-3"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Cek Status Pesanan
+              </button>
+
               <button 
                 onClick={() => setShowSuccessPopup(false)}
-                className="w-full py-3 rounded-xl font-bold text-[#442f2a]/60 hover:bg-[#fff7ec]/80 transition-colors"
+                className="w-full py-2.5 rounded-xl font-bold text-[#442f2a]/40 hover:text-[#442f2a]/60 transition-colors text-sm"
               >
                 Tutup
               </button>
@@ -518,6 +784,234 @@ export default function LandingPage() {
           </div>
         </div>
       )}
+
+      {/* Order Lookup Section */}
+      <section id="order-lookup" className="bg-gradient-to-b from-[#fff7ec] to-[#fff7ec] py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden scroll-mt-20">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-t from-rose-200/15 to-transparent blur-[100px] rounded-full pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center mb-10 sm:mb-14">
+            <span className="inline-block py-1.5 px-4 rounded-full bg-white border border-[#442f2a]/20 text-[#442f2a] text-xs sm:text-sm font-bold tracking-widest uppercase mb-4 shadow-sm">
+              🔍 Cek Pesanan
+            </span>
+            <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Cek Status Pesanan</h3>
+            <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
+              Masukkan nama atau nomor HP untuk melihat pesanan Anda
+            </p>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden border border-white p-2 sm:p-3">
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-sm border border-stone-50">
+              {/* Search Input */}
+              <div className="flex gap-3 mb-6">
+                <div className="relative flex-1">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#442f2a]/40">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={lookupQuery}
+                    onChange={(e) => setLookupQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+                    placeholder="Nama atau nomor HP..."
+                    className="w-full pl-12 pr-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLookup}
+                  disabled={isLookingUp || !lookupQuery.trim()}
+                  className="px-5 sm:px-6 py-4 bg-[#442f2a] text-[#fff7ec] rounded-2xl font-bold hover:bg-[#2e1d1a] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                >
+                  {isLookingUp ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white border-l-2 border-l-transparent border-r-2 border-r-transparent"></div>
+                  ) : (
+                    "Cek"
+                  )}
+                </button>
+              </div>
+
+              {/* Results */}
+              {hasSearched && (
+                <div className="space-y-4">
+                  {lookupResults.length === 0 ? (
+                    <div className="text-center py-10 px-6 bg-[#fff7ec] rounded-2xl border-2 border-dashed border-[#442f2a]/15">
+                      <div className="text-3xl mb-3">📭</div>
+                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden"/> Coba dengan nama atau nomor HP lain.</p>
+                    </div>
+                  ) : (
+                    lookupResults.map((order) => (
+                      <div key={order.id} className="bg-[#fff7ec] rounded-2xl p-5 sm:p-6 border border-[#442f2a]/10 hover:border-[#442f2a]/20 transition-all">
+                        {/* Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-4 border-b border-[#442f2a]/10">
+                          <div>
+                            <h5 className="font-black text-[#442f2a] text-base sm:text-lg">{order.customer_name}</h5>
+                            <p className="text-[#442f2a]/50 text-xs font-medium">{new Date(order.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
+                              order.payment_status === "unpaid" 
+                                ? "bg-red-100 text-red-700" 
+                                : "bg-green-100 text-green-700"
+                            }`}>
+                              {order.payment_status === "unpaid" ? "Belum Bayar" : order.payment_status === "paid_qris" ? "QRIS ✓" : "Cash ✓"}
+                            </span>
+                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
+                              order.production_status === "pending" 
+                                ? "bg-amber-100 text-amber-700" 
+                                : "bg-green-100 text-green-700"
+                            }`}>
+                              {order.production_status === "pending" ? "⏳ Proses" : "✅ Selesai"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Detail */}
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-[#442f2a]/40 shrink-0">📱</span>
+                            <span className="text-[#442f2a]/70 font-medium">{order.wa_number}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-[#442f2a]/40 shrink-0">📍</span>
+                            <span className="text-[#442f2a]/70 font-medium">{order.address}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-[#442f2a]/40 shrink-0">{order.delivery_method === "cod" ? "🤝" : "🚚"}</span>
+                            <span className="text-[#442f2a]/70 font-medium">{order.delivery_method === "cod" ? "COD - Indomaret Alun-Alun Mojokerto" : "DO - Delivery Order"}</span>
+                          </div>
+                        </div>
+
+                        {/* Items */}
+                        <div className="bg-white rounded-xl p-3 sm:p-4 space-y-2 mb-3">
+                          {(order.items as { name: string; qty: number; price: number }[]).map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-sm">
+                              <span className="text-[#442f2a]/80 font-medium">{item.name} x{item.qty}</span>
+                              <span className="text-[#442f2a] font-bold">{formatRupiah(item.price * item.qty)}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Total */}
+                        <div className="flex justify-between items-center pt-3 border-t border-[#442f2a]/10">
+                          <span className="text-sm font-bold text-[#442f2a]/60 uppercase tracking-wider">Total</span>
+                          <span className="text-xl font-black text-[#442f2a]">{formatRupiah(order.total_price)}</span>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="mt-4">
+                          {order.payment_status === "unpaid" ? (
+                            <a
+                              href={`https://wa.me/6281336994747?text=${encodeURIComponent(
+                                `Halo Admin, saya mau bayar pesanan via QRIS:\n- Nama: ${order.customer_name}\n- WA: ${order.wa_number}\n\n*Pesanan:*\n${(order.items as { name: string; qty: number; price: number }[]).map(i => `- ${i.name} x${i.qty} = ${formatRupiah(i.price * i.qty)}`).join("\n")}\n\n*Total Tagihan: ${formatRupiah(order.total_price)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[#fff7ec] bg-[#442f2a] hover:bg-[#2e1d1a] active:scale-95 transition-all text-sm"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                              </svg>
+                              Bayar via QRIS
+                            </a>
+                          ) : (
+                            <a
+                              href={`https://wa.me/6281336994747?text=${encodeURIComponent(
+                                `Halo Admin, saya ingin menanyakan pesanan saya:\n- Nama: ${order.customer_name}\n- WA: ${order.wa_number}\n\n*Pesanan:*\n${(order.items as { name: string; qty: number; price: number }[]).map(i => `- ${i.name} x${i.qty} = ${formatRupiah(i.price * i.qty)}`).join("\n")}\n\n*Total: ${formatRupiah(order.total_price)}*\n\nTerima kasih.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[#442f2a] bg-white border border-[#442f2a]/20 hover:bg-[#f5cbd7]/30 active:scale-95 transition-all text-sm"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                              </svg>
+                              Chat Admin
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Lokasi DO Section */}
+      <section className="bg-gradient-to-b from-[#fff7ec] to-white py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-rose-200/20 to-transparent blur-[100px] rounded-full pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center mb-10 sm:mb-14">
+            <span className="inline-block py-1.5 px-4 rounded-full bg-white border border-[#442f2a]/20 text-[#442f2a] text-xs sm:text-sm font-bold tracking-widest uppercase mb-4 shadow-sm">
+              📍 Lokasi
+            </span>
+            <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Lokasi DO (Delivery Order)</h3>
+            <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
+              Titik pengambilan & pengiriman pesanan Neagable
+            </p>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden border border-white p-2 sm:p-3">
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden shadow-sm border border-stone-50">
+              <div className="w-full h-[300px] sm:h-[400px]">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1500!2d112.46758141671499!3d-7.451004745649361!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zN8KwMjcnMDMuNiJTIDExMsKwMjgnMDMuMyJF!5e0!3m2!1sid!2sid!4v1"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="rounded-[1.5rem] sm:rounded-[2.5rem]"
+                ></iframe>
+              </div>
+              <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Neagable</h4>
+                  <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href="https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-xl font-bold text-sm hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Buka di Google Maps
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
+                      const shareText = "📍 Lokasi DO Neagable - Titik pengambilan pesanan:\n" + shareUrl;
+                      if (navigator.share) {
+                        navigator.share({ title: "Lokasi DO Neagable", text: "📍 Titik pengambilan pesanan Neagable", url: shareUrl });
+                      } else {
+                        navigator.clipboard.writeText(shareText);
+                        alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
+                      }
+                    }}
+                    className="w-11 h-11 flex items-center justify-center bg-[#f5cbd7] text-[#442f2a] rounded-xl hover:bg-[#eeb1c3] transition-all active:scale-95 border border-[#442f2a]/20"
+                    title="Share ke Kurir"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-[#fff7ec] py-12 text-center">
