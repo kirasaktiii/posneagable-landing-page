@@ -247,7 +247,7 @@ export default function LandingPage() {
           <div className="flex items-center">
             <img 
               src="/assets/icons/icon-1.png" 
-              alt="Naégable Logo" 
+              alt="Naegablé Logo" 
               className="h-14 md:h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" 
             />
           </div>
@@ -275,7 +275,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#f5cbd7]"></span>
             </span>
-            Naégable Sweet Treats 🍪
+            Naegablé Sweet Treats 🍪
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] tracking-tight text-[#442f2a] font-serif">
             Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#f790b2] drop-shadow-sm">& Dessert</span>
@@ -488,7 +488,7 @@ export default function LandingPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
-                        placeholder="Contoh: Naégable"
+                        placeholder="Contoh: Naegablé"
                       />
                     </div>
                     <div className="space-y-2">
@@ -992,7 +992,7 @@ export default function LandingPage() {
             </span>
             <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Lokasi DO (Delivery Order)</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
-              Titik pengambilan & pengiriman pesanan Naégable
+              Titik pengambilan & pengiriman pesanan Naegablé
             </p>
           </div>
 
@@ -1012,7 +1012,7 @@ export default function LandingPage() {
               </div>
               <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Naégable</h4>
+                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Naegablé</h4>
                   <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1032,9 +1032,9 @@ export default function LandingPage() {
                     type="button"
                     onClick={() => {
                       const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
-                      const shareText = "📍 Lokasi DO Naégable - Titik pengambilan pesanan:\n" + shareUrl;
+                      const shareText = "📍 Lokasi DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
                       if (navigator.share) {
-                        navigator.share({ title: "Lokasi DO Naégable", text: "📍 Titik pengambilan pesanan Naégable", url: shareUrl });
+                        navigator.share({ title: "Lokasi DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
                       } else {
                         navigator.clipboard.writeText(shareText);
                         alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
@@ -1060,12 +1060,12 @@ export default function LandingPage() {
           <div className="flex items-center justify-center gap-3 mb-6">
             <img 
               src="/assets/icons/icon-1.png" 
-              alt="Naégable Logo" 
+              alt="Naegablé Logo" 
               className="w-12 h-12 object-contain drop-shadow-sm" 
             />
-            <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Naégable</h2>
+            <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Naegablé</h2>
           </div>
-          <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Naégable Landing Page. All rights reserved.</p>
+          <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Naegablé Landing Page. All rights reserved.</p>
         </div>
       </footer>
     </div>

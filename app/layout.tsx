@@ -15,7 +15,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Naégable - Sweet Treats & Pastries",
+  title: "Naegablé - Sweet Treats & Pastries",
   description: "Katalog Aneka Manisan, Brownies, dan Cookies",
 };
 
