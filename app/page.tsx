@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase credentials (Hardcoded agar instan)
@@ -19,6 +20,8 @@ interface Product {
   name: string;
   price: number;
   stock: number;
+  is_active?: boolean;
+  image_url?: string | null;
   category_id?: any;
   categories?: any;
 }
@@ -80,7 +83,7 @@ export default function LandingPage() {
       // Ambil products dengan relasi ke categories
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, stock, category_id, categories(name)")
+        .select("id, name, price, stock, is_active, image_url, category_id, categories(name)")
         .order("name", { ascending: true });
 
       if (error) {
@@ -405,15 +408,31 @@ export default function LandingPage() {
                 )}
                 <div className="h-32 sm:h-48 md:h-64 bg-[#fff7ec] flex items-center justify-center relative overflow-hidden border-b border-[#442f2a]/10">
                   <div className="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-[#fff7ec] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="text-5xl sm:text-6xl md:text-8xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 drop-shadow-md">🍪</span>
+                  {product.image_url ? (
+                    <Image
+                      src={product.image_url}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover transform group-hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <span className="text-5xl sm:text-6xl md:text-8xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 drop-shadow-md">🍪</span>
+                  )}
                   
-                  {product.stock === 0 && (
+                  {product.is_active === false ? (
+                    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
+                      <span className="bg-stone-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-stone-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
+                        NOT AVAILABLE
+                      </span>
+                    </div>
+                  ) : product.stock === 0 ? (
                     <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
                       <span className="bg-red-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-red-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
                         HABIS
                       </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 <div className="p-3 sm:p-6 md:p-8 flex-grow flex flex-col justify-between bg-white">
                   <div>
@@ -425,22 +444,22 @@ export default function LandingPage() {
                   <div className="mt-auto">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-5 gap-2 sm:gap-0">
                       <span className="text-xs sm:text-sm font-bold text-[#442f2a]/40 uppercase tracking-wider hidden sm:block">Ketersediaan</span>
-                      <span className={`text-[10px] sm:text-sm font-black px-2 py-1 sm:px-4 sm:py-1.5 rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {product.stock > 0 ? <><span className="hidden sm:inline">{product.stock} TERSISA</span><span className="sm:hidden">{product.stock} pcs</span></> : 'KOSONG'}
+                      <span className={`text-[10px] sm:text-sm font-black px-2 py-1 sm:px-4 sm:py-1.5 rounded-full ${product.is_active === false ? 'bg-stone-200 text-stone-600' : product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {product.is_active === false ? 'NOT AVAILABLE' : product.stock > 0 ? <><span className="hidden sm:inline">{product.stock} TERSISA</span><span className="sm:hidden">{product.stock} pcs</span></> : 'KOSONG'}
                       </span>
                     </div>
                     <button 
                       onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
+                      disabled={product.stock === 0 || product.is_active === false}
                       className={`w-full px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl transition-all active:scale-95 text-xs sm:text-sm md:text-base flex justify-center items-center gap-1 sm:gap-2 border ${
-                        product.stock === 0 
+                        (product.stock === 0 || product.is_active === false)
                         ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 border-[#442f2a]/10 cursor-not-allowed' 
                         : isSelected 
                         ? 'bg-[#f5cbd7] text-[#442f2a] font-semibold border-[#442f2a] ring-1 ring-[#442f2a] shadow-sm'
                         : 'bg-transparent text-[#442f2a] border-[#442f2a]/20 hover:bg-[#f5cbd7] hover:border-[#442f2a]'
                       }`}
                     >
-                      {product.stock === 0 ? 'Habis' : isSelected ? '✓ Terpilih' : '+ Tambah'}
+                      {product.is_active === false ? 'Not Available' : product.stock === 0 ? 'Habis' : isSelected ? '✓ Terpilih' : '+ Tambah'}
                     </button>
                   </div>
                 </div>
@@ -696,7 +715,7 @@ export default function LandingPage() {
                         className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a]/80 bg-[#fff7ec]/50 font-bold cursor-pointer appearance-none"
                       >
                         <option value="" disabled>✨ Klik untuk tambah menu lain ke keranjang</option>
-                        {products.filter(p => p.stock > 0 && !cart.find(c => c.product.id === p.id)).map(p => (
+                        {products.filter(p => p.is_active !== false && p.stock > 0 && !cart.find(c => c.product.id === p.id)).map(p => (
                           <option key={p.id} value={p.id}>{p.name} - {formatRupiah(p.price)}</option>
                         ))}
                       </select>
@@ -982,7 +1001,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Lokasi DO Section */}
+      {/* Lokasi Pick-Up & DO Section */}
       <section className="bg-gradient-to-b from-[#fff7ec] to-white py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-rose-200/20 to-transparent blur-[100px] rounded-full pointer-events-none"></div>
         <div className="max-w-4xl mx-auto relative z-10">
@@ -990,7 +1009,7 @@ export default function LandingPage() {
             <span className="inline-block py-1.5 px-4 rounded-full bg-white border border-[#442f2a]/20 text-[#442f2a] text-xs sm:text-sm font-bold tracking-widest uppercase mb-4 shadow-sm">
               📍 Lokasi
             </span>
-            <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Lokasi DO (Delivery Order)</h3>
+            <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Lokasi Pick-Up & Delivery Order (DO)</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
               Titik pengambilan & pengiriman pesanan Naegablé
             </p>
@@ -1012,7 +1031,7 @@ export default function LandingPage() {
               </div>
               <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi DO Naegablé</h4>
+                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi Pick-Up & DO Naegablé</h4>
                   <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1032,9 +1051,9 @@ export default function LandingPage() {
                     type="button"
                     onClick={() => {
                       const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
-                      const shareText = "📍 Lokasi DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
+                      const shareText = "📍 Lokasi Pick-Up & DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
                       if (navigator.share) {
-                        navigator.share({ title: "Lokasi DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
+                        navigator.share({ title: "Lokasi Pick-Up & DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
                       } else {
                         navigator.clipboard.writeText(shareText);
                         alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
