@@ -174,23 +174,23 @@ export default function LandingPage() {
 
     // ==========================================
     // PENGINGAT: Ganti nomor WA di bawah ini dengan nomor Admin
-    const adminPhoneNumber = "6281336994747"; 
+    const adminPhoneNumber = "6281336994747";
     // ==========================================
 
     const itemsText = cart
       .map((item) => `- ${item.product.name} x${item.qty} = ${formatRupiah(item.product.price * item.qty)}`)
       .join("\n");
 
-    const deliveryText = deliveryMethod === "do" 
+    const deliveryText = deliveryMethod === "do"
       ? "DO (Delivery Order - pengiriman via kurir)"
       : deliveryMethod === "cod"
-      ? "COD (Ketemu di Alun-Alun Mojokerto)"
-      : "Pick Up (Ambil di Tempat)";
+        ? "COD (Ketemu di Alun-Alun Mojokerto)"
+        : "Pick Up (Ambil di Tempat)";
 
     const waMessage = `Halo Admin, saya mau order & minta barcode QRIS:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n- Metode: ${deliveryText}\n\n*Pesanan:*\n${itemsText}\n\n*Total Tagihan: ${formatRupiah(total_price)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`;
 
     const waUrl = `https://wa.me/${adminPhoneNumber}?text=${encodeURIComponent(waMessage)}`;
-    
+
     setGeneratedWaUrl(waUrl);
     setShowSuccessPopup(true);
 
@@ -210,7 +210,7 @@ export default function LandingPage() {
     setHasSearched(true);
 
     const query = lookupQuery.trim();
-    
+
     try {
       // Search by name
       const { data: byName } = await supabase
@@ -230,10 +230,10 @@ export default function LandingPage() {
 
       // Combine & deduplicate
       const combined = [...(byName || []), ...(byPhone || [])];
-      const unique = combined.filter((order, index, self) => 
+      const unique = combined.filter((order, index, self) =>
         index === self.findIndex(o => o.id === order.id)
       );
-      
+
       setLookupResults(unique);
     } catch (err) {
       console.error("Lookup error:", err);
@@ -248,10 +248,10 @@ export default function LandingPage() {
       <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 transition-all border-b border-[#442f2a]/10">
         <div className="max-w-6xl mx-auto px-6 py-2 flex justify-between items-center">
           <div className="flex items-center">
-            <img 
-              src="/assets/icons/icon-1.png" 
-              alt="Naegablé Logo" 
-              className="h-14 md:h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" 
+            <img
+              src="/assets/icons/icon-1.png"
+              alt="Naegablé Logo"
+              className="h-14 md:h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform"
             />
           </div>
           <button onClick={() => document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" })} className="relative bg-[#f5cbd7] text-[#442f2a] p-2.5 rounded-xl hover:bg-[#eeb1c3] border border-[#442f2a] shadow-sm transition-all active:scale-95">
@@ -271,7 +271,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-gradient-to-b from-white to-[#f3a0aa]/30 pt-24 pb-32">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] brightness-100 contrast-150"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-40 bg-gradient-to-b from-amber-200 via-orange-200 to-transparent blur-[120px] rounded-full pointer-events-none"></div>
-        
+
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#f5cbd7]/30 border border-[#442f2a]/20 text-[#442f2a] font-bold text-xs tracking-wide uppercase mb-8 shadow-sm">
             <span className="relative flex h-2 w-2">
@@ -314,11 +314,10 @@ export default function LandingPage() {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 border ${
-                      selectedCategory === cat
+                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95 border ${selectedCategory === cat
                         ? "bg-[#442f2a] text-[#fff7ec] border-[#442f2a] shadow-md"
                         : "bg-white text-[#442f2a]/70 border-[#442f2a]/15 hover:bg-[#f5cbd7]/40 hover:border-[#442f2a]/30"
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -337,11 +336,10 @@ export default function LandingPage() {
                   setSearchQuery("");
                 }
               }}
-              className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-95 border ${
-                isSearchOpen
+              className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-95 border ${isSearchOpen
                   ? "bg-[#442f2a] text-[#fff7ec] border-[#442f2a] shadow-md"
                   : "bg-white text-[#442f2a]/60 border-[#442f2a]/15 hover:bg-[#f5cbd7]/40 hover:border-[#442f2a]/30"
-              }`}
+                }`}
               title="Cari produk"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -382,7 +380,7 @@ export default function LandingPage() {
             </div>
           )}
         </div>
-        
+
         {loading ? (
           <div className="flex flex-col justify-center items-center h-64 gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-amber-700 border-l-4 border-l-transparent border-r-4 border-r-transparent"></div>
@@ -398,73 +396,73 @@ export default function LandingPage() {
                 return matchCategory && matchSearch;
               })
               .map((product) => {
-              const isSelected = cart.some(item => item.product.id === product.id);
-              return (
-              <div key={product.id} className={`group bg-white rounded-2xl sm:rounded-3xl shadow-sm border ${isSelected ? 'border-[#442f2a] ring-2 ring-[#442f2a]/30 shadow-[#f5cbd7]/30' : 'border-[#442f2a]/20'} overflow-hidden hover:shadow-2xl hover:shadow-[#f5cbd7]/20 hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 flex flex-col relative`}>
-                {isSelected && (
-                  <div className="absolute top-2 right-2 z-20 bg-[#f5cbd7] text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                    Terpilih
-                  </div>
-                )}
-                <div className="h-32 sm:h-48 md:h-64 bg-[#fff7ec] flex items-center justify-center relative overflow-hidden border-b border-[#442f2a]/10">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-[#fff7ec] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  {product.image_url ? (
-                    <Image
-                      src={product.image_url}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <span className="text-5xl sm:text-6xl md:text-8xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 drop-shadow-md">🍪</span>
-                  )}
-                  
-                  {product.is_active === false ? (
-                    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
-                      <span className="bg-stone-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-stone-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
-                        NOT AVAILABLE
-                      </span>
+                const isSelected = cart.some(item => item.product.id === product.id);
+                return (
+                  <div key={product.id} className={`group bg-white rounded-2xl sm:rounded-3xl shadow-sm border ${isSelected ? 'border-[#442f2a] ring-2 ring-[#442f2a]/30 shadow-[#f5cbd7]/30' : 'border-[#442f2a]/20'} overflow-hidden hover:shadow-2xl hover:shadow-[#f5cbd7]/20 hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 flex flex-col relative`}>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 z-20 bg-[#f5cbd7] text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                        Terpilih
+                      </div>
+                    )}
+                    <div className="aspect-square w-full bg-[#fff7ec] flex items-center justify-center relative overflow-hidden border-b border-[#442f2a]/10 p-2 sm:p-4">
+                      <div className="absolute inset-0 bg-gradient-to-br from-pink-50/50 to-[#fff7ec] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      {product.image_url ? (
+                        <Image
+                          src={product.image_url}
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 33vw"
+                          className="object-contain transform group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <span className="text-5xl sm:text-6xl md:text-8xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 drop-shadow-md">🍪</span>
+                      )}
+
+                      {product.is_active === false ? (
+                        <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
+                          <span className="bg-stone-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-stone-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
+                            NOT AVAILABLE
+                          </span>
+                        </div>
+                      ) : product.stock === 0 ? (
+                        <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
+                          <span className="bg-red-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-red-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
+                            HABIS
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : product.stock === 0 ? (
-                    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
-                      <span className="bg-red-500 text-white px-3 py-1.5 sm:px-6 sm:py-2 rounded-full font-black shadow-lg sm:shadow-xl shadow-red-500/40 transform -rotate-12 text-xs sm:text-sm md:text-xl border-2 sm:border-4 border-white tracking-widest sm:tracking-wider">
-                        HABIS
-                      </span>
+                    <div className="p-3 sm:p-6 md:p-8 flex-grow flex flex-col justify-between bg-white">
+                      <div>
+                        <h4 className="text-sm sm:text-lg md:text-2xl font-bold text-[#442f2a] mb-1 sm:mb-2 leading-tight group-hover:text-[#442f2a] transition-colors line-clamp-2">{product.name}</h4>
+                        <p className="text-sm sm:text-xl md:text-3xl font-black text-[#442f2a] mb-3 sm:mb-6">
+                          {formatRupiah(product.price)}
+                        </p>
+                      </div>
+                      <div className="mt-auto">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-5 gap-2 sm:gap-0">
+                          <span className="text-xs sm:text-sm font-bold text-[#442f2a]/40 uppercase tracking-wider hidden sm:block">Ketersediaan</span>
+                          <span className={`text-[10px] sm:text-sm font-black px-2 py-1 sm:px-4 sm:py-1.5 rounded-full ${product.is_active === false ? 'bg-stone-200 text-stone-600' : product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {product.is_active === false ? 'NOT AVAILABLE' : product.stock > 0 ? <><span className="hidden sm:inline">{product.stock} TERSISA</span><span className="sm:hidden">{product.stock} pcs</span></> : 'KOSONG'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => addToCart(product)}
+                          disabled={product.stock === 0 || product.is_active === false}
+                          className={`w-full px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl transition-all active:scale-95 text-xs sm:text-sm md:text-base flex justify-center items-center gap-1 sm:gap-2 border ${(product.stock === 0 || product.is_active === false)
+                              ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 border-[#442f2a]/10 cursor-not-allowed'
+                              : isSelected
+                                ? 'bg-[#f5cbd7] text-[#442f2a] font-semibold border-[#442f2a] ring-1 ring-[#442f2a] shadow-sm'
+                                : 'bg-transparent text-[#442f2a] border-[#442f2a]/20 hover:bg-[#f5cbd7] hover:border-[#442f2a]'
+                            }`}
+                        >
+                          {product.is_active === false ? 'Not Available' : product.stock === 0 ? 'Habis' : isSelected ? '✓ Terpilih' : '+ Tambah'}
+                        </button>
+                      </div>
                     </div>
-                  ) : null}
-                </div>
-                <div className="p-3 sm:p-6 md:p-8 flex-grow flex flex-col justify-between bg-white">
-                  <div>
-                    <h4 className="text-sm sm:text-lg md:text-2xl font-bold text-[#442f2a] mb-1 sm:mb-2 leading-tight group-hover:text-[#442f2a] transition-colors line-clamp-2">{product.name}</h4>
-                    <p className="text-sm sm:text-xl md:text-3xl font-black text-[#442f2a] mb-3 sm:mb-6">
-                      {formatRupiah(product.price)}
-                    </p>
                   </div>
-                  <div className="mt-auto">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-5 gap-2 sm:gap-0">
-                      <span className="text-xs sm:text-sm font-bold text-[#442f2a]/40 uppercase tracking-wider hidden sm:block">Ketersediaan</span>
-                      <span className={`text-[10px] sm:text-sm font-black px-2 py-1 sm:px-4 sm:py-1.5 rounded-full ${product.is_active === false ? 'bg-stone-200 text-stone-600' : product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {product.is_active === false ? 'NOT AVAILABLE' : product.stock > 0 ? <><span className="hidden sm:inline">{product.stock} TERSISA</span><span className="sm:hidden">{product.stock} pcs</span></> : 'KOSONG'}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0 || product.is_active === false}
-                      className={`w-full px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl transition-all active:scale-95 text-xs sm:text-sm md:text-base flex justify-center items-center gap-1 sm:gap-2 border ${
-                        (product.stock === 0 || product.is_active === false)
-                        ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 border-[#442f2a]/10 cursor-not-allowed' 
-                        : isSelected 
-                        ? 'bg-[#f5cbd7] text-[#442f2a] font-semibold border-[#442f2a] ring-1 ring-[#442f2a] shadow-sm'
-                        : 'bg-transparent text-[#442f2a] border-[#442f2a]/20 hover:bg-[#f5cbd7] hover:border-[#442f2a]'
-                      }`}
-                    >
-                      {product.is_active === false ? 'Not Available' : product.stock === 0 ? 'Habis' : isSelected ? '✓ Terpilih' : '+ Tambah'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )})}
+                )
+              })}
           </div>
         )}
       </section>
@@ -473,7 +471,7 @@ export default function LandingPage() {
       <section id="order-form" className="bg-gradient-to-b from-[#fff7ec] to-[#fff7ec] py-24 px-4 sm:px-6 relative overflow-hidden scroll-mt-10">
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[600px] sm:w-[800px] h-[600px] sm:h-[800px] bg-gradient-to-bl from-pink-300/20 to-rose-300/20 blur-[100px] sm:blur-[120px] rounded-full pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/3 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-gradient-to-tr from-rose-300/20 to-pink-300/20 blur-[80px] sm:blur-[100px] rounded-full pointer-events-none"></div>
-        
+
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="text-center mb-12 sm:mb-16">
             <span className="inline-block py-1.5 px-4 rounded-full bg-white border border-[#442f2a]/20 text-[#442f2a] text-xs sm:text-sm font-bold tracking-widest uppercase mb-4 shadow-sm">
@@ -488,7 +486,7 @@ export default function LandingPage() {
           <div className="bg-white/60 backdrop-blur-xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden border border-white p-2 sm:p-3">
             <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 sm:p-10 md:p-12 shadow-sm border border-stone-50">
               <form onSubmit={handleSubmit} className="space-y-10 sm:space-y-12">
-                
+
                 {/* Informasi Pembeli */}
                 <div className="space-y-6 sm:space-y-8">
                   <div className="flex items-center gap-4 border-b border-[#442f2a]/10 pb-4">
@@ -497,12 +495,12 @@ export default function LandingPage() {
                       Informasi Pelanggan
                     </h4>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Nama Lengkap</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         required
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
@@ -512,8 +510,8 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Nomor WhatsApp</label>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         required
                         value={waNumber}
                         onChange={(e) => setWaNumber(e.target.value)}
@@ -525,7 +523,7 @@ export default function LandingPage() {
 
                   <div className="space-y-2">
                     <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Alamat Pengiriman</label>
-                    <textarea 
+                    <textarea
                       required
                       rows={3}
                       value={address}
@@ -550,11 +548,10 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("do")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                        deliveryMethod === "do"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${deliveryMethod === "do"
                           ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
                           : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-2xl">🚚</span>
@@ -569,11 +566,10 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("cod")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${
-                        deliveryMethod === "cod"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${deliveryMethod === "cod"
                           ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
                           : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-2xl group-hover/btn:scale-110 transition-transform">🤝</span>
@@ -593,11 +589,10 @@ export default function LandingPage() {
                     <button
                       type="button"
                       onClick={() => setDeliveryMethod("pickup")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${
-                        deliveryMethod === "pickup"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${deliveryMethod === "pickup"
                           ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
                           : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-2xl">🏪</span>
@@ -673,27 +668,27 @@ export default function LandingPage() {
                             <h5 className="font-bold text-[#442f2a] text-sm sm:text-base">{item.product.name}</h5>
                             <p className="text-[#442f2a] font-black text-sm">{formatRupiah(item.product.price)}</p>
                           </div>
-                          
+
                           {/* Kontrol Qty */}
                           <div className="flex items-center gap-1.5 bg-[#fff7ec] p-1.5 rounded-xl border border-[#442f2a]/10 relative z-10">
-                            <button 
-                              type="button" 
-                              onClick={() => updateQty(item.product.id, item.qty - 1, item.product.stock)} 
+                            <button
+                              type="button"
+                              onClick={() => updateQty(item.product.id, item.qty - 1, item.product.stock)}
                               className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center font-bold text-[#442f2a]/60 hover:text-white hover:bg-[#442f2a] rounded-lg transition-colors bg-white shadow-sm"
                             >
                               −
                             </button>
                             <span className="font-black text-[#442f2a] w-8 sm:w-10 text-center text-sm sm:text-base">{item.qty}</span>
-                            <button 
-                              type="button" 
-                              onClick={() => updateQty(item.product.id, item.qty + 1, item.product.stock)} 
-                              disabled={item.qty >= item.product.stock} 
+                            <button
+                              type="button"
+                              onClick={() => updateQty(item.product.id, item.qty + 1, item.product.stock)}
+                              disabled={item.qty >= item.product.stock}
                               className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center font-bold text-[#442f2a]/60 hover:text-white hover:bg-[#442f2a] rounded-lg transition-colors bg-white shadow-sm disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-[#442f2a]/60"
                             >
                               +
                             </button>
                           </div>
-                          
+
                           <div className="text-left sm:text-right w-full sm:w-32 relative z-10 border-t sm:border-t-0 border-[#442f2a]/10 pt-3 sm:pt-0 mt-1 sm:mt-0">
                             <p className="text-[10px] sm:text-xs text-[#442f2a]/40 font-bold uppercase tracking-wider mb-0.5">Subtotal</p>
                             <p className="font-black text-[#442f2a] text-sm sm:text-base">{formatRupiah(item.product.price * item.qty)}</p>
@@ -706,7 +701,7 @@ export default function LandingPage() {
                   {/* Dropdown Tambah Cepat */}
                   <div className="pt-2">
                     <div className="relative">
-                      <select 
+                      <select
                         value=""
                         onChange={(e) => {
                           const product = products.find(p => p.id === e.target.value);
@@ -751,14 +746,13 @@ export default function LandingPage() {
                   </div>
                 )}
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isSubmitting || cart.length === 0}
-                  className={`group w-full py-4 sm:py-5 rounded-[2rem] font-black text-lg sm:text-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 mt-6 relative overflow-hidden border border-[#442f2a] ${
-                    isSubmitting || cart.length === 0 
-                    ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 shadow-none cursor-not-allowed border-[#442f2a]/20' 
-                    : 'bg-[#f5cbd7] text-[#442f2a] hover:bg-[#eeb1c3] hover:-translate-y-1 hover:shadow-[#f5cbd7]/50 active:scale-[0.98]'
-                  }`}
+                  className={`group w-full py-4 sm:py-5 rounded-[2rem] font-black text-lg sm:text-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 mt-6 relative overflow-hidden border border-[#442f2a] ${isSubmitting || cart.length === 0
+                      ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 shadow-none cursor-not-allowed border-[#442f2a]/20'
+                      : 'bg-[#f5cbd7] text-[#442f2a] hover:bg-[#eeb1c3] hover:-translate-y-1 hover:shadow-[#f5cbd7]/50 active:scale-[0.98]'
+                    }`}
                 >
                   {/* Efek kilap (shine effect) pada tombol aktif saat di hover */}
                   {(!isSubmitting && cart.length > 0) && (
@@ -804,7 +798,7 @@ export default function LandingPage() {
               </p>
 
               {/* Tombol Minta QRIS */}
-              <a 
+              <a
                 href={generatedWaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -817,7 +811,7 @@ export default function LandingPage() {
               </a>
 
               {/* Tombol Cek Pesanan */}
-              <button 
+              <button
                 onClick={() => {
                   setShowSuccessPopup(false);
                   setTimeout(() => document.getElementById("order-lookup")?.scrollIntoView({ behavior: "smooth" }), 300);
@@ -830,7 +824,7 @@ export default function LandingPage() {
                 Cek Status Pesanan
               </button>
 
-              <button 
+              <button
                 onClick={() => setShowSuccessPopup(false)}
                 className="w-full py-2.5 rounded-xl font-bold text-[#442f2a]/40 hover:text-[#442f2a]/60 transition-colors text-sm"
               >
@@ -894,7 +888,7 @@ export default function LandingPage() {
                   {lookupResults.length === 0 ? (
                     <div className="text-center py-10 px-6 bg-[#fff7ec] rounded-2xl border-2 border-dashed border-[#442f2a]/15">
                       <div className="text-3xl mb-3">📭</div>
-                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden"/> Coba dengan nama atau nomor HP lain.</p>
+                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden" /> Coba dengan nama atau nomor HP lain.</p>
                     </div>
                   ) : (
                     lookupResults.map((order) => (
@@ -906,18 +900,16 @@ export default function LandingPage() {
                             <p className="text-[#442f2a]/50 text-xs font-medium">{new Date(order.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                           </div>
                           <div className="flex gap-2">
-                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
-                              order.payment_status === "unpaid" 
-                                ? "bg-red-100 text-red-700" 
+                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${order.payment_status === "unpaid"
+                                ? "bg-red-100 text-red-700"
                                 : "bg-green-100 text-green-700"
-                            }`}>
+                              }`}>
                               {order.payment_status === "unpaid" ? "Belum Bayar" : order.payment_status === "paid_qris" ? "QRIS ✓" : "Cash ✓"}
                             </span>
-                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
-                              order.production_status === "pending" 
-                                ? "bg-amber-100 text-amber-700" 
+                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${order.production_status === "pending"
+                                ? "bg-amber-100 text-amber-700"
                                 : "bg-green-100 text-green-700"
-                            }`}>
+                              }`}>
                               {order.production_status === "pending" ? "⏳ Proses" : "✅ Selesai"}
                             </span>
                           </div>
@@ -985,7 +977,7 @@ export default function LandingPage() {
                               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[#442f2a] bg-white border border-[#442f2a]/20 hover:bg-[#f5cbd7]/30 active:scale-95 transition-all text-sm"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
                               </svg>
                               Chat Admin
                             </a>
@@ -1077,10 +1069,10 @@ export default function LandingPage() {
       <footer className="bg-[#fff7ec] py-12 text-center">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-center gap-3 mb-6">
-            <img 
-              src="/assets/icons/icon-1.png" 
-              alt="Naegablé Logo" 
-              className="w-12 h-12 object-contain drop-shadow-sm" 
+            <img
+              src="/assets/icons/icon-1.png"
+              alt="Naegablé Logo"
+              className="w-12 h-12 object-contain drop-shadow-sm"
             />
             <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Naegablé</h2>
           </div>

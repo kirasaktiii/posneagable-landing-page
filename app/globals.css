@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff5f2; /* Soft warm pinkish background for GenZ aesthetic */
-  --foreground: #4a2c2a; /* Soft brown/chocolate for text */
+  --background: #fff5f2;
+  /* Soft warm pinkish background for GenZ aesthetic */
+  --foreground: #4a2c2a;
+  /* Soft brown/chocolate for text */
 }
 
 @theme inline {
@@ -30,6 +32,7 @@ body {
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -39,6 +42,7 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
