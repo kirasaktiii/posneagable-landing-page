@@ -212,14 +212,6 @@ export default function LandingPage() {
     const query = lookupQuery.trim();
 
     try {
-      // Search by name
-      const { data: byName } = await supabase
-        .from("po_orders")
-        .select("*")
-        .ilike("customer_name", `%${query}%`)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
       // Search by phone
       const { data: byPhone } = await supabase
         .from("po_orders")
@@ -228,13 +220,7 @@ export default function LandingPage() {
         .order("created_at", { ascending: false })
         .limit(10);
 
-      // Combine & deduplicate
-      const combined = [...(byName || []), ...(byPhone || [])];
-      const unique = combined.filter((order, index, self) =>
-        index === self.findIndex(o => o.id === order.id)
-      );
-
-      setLookupResults(unique);
+      setLookupResults(byPhone || []);
     } catch (err) {
       console.error("Lookup error:", err);
       setLookupResults([]);
@@ -246,6 +232,10 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#fff7ec] font-sans text-[#442f2a] scroll-smooth">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 transition-all border-b border-[#442f2a]/10">
+        <div className="bg-[#f5cbd7] text-[#442f2a] text-[10px] sm:text-xs py-1.5 px-4 text-center w-full font-medium tracking-wide shadow-sm flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-1.5">
+          <span><span className="animate-pulse mr-1"></span><strong>Operational hours:</strong> Senin-Jumat, 09.00 - 14.00 WIB</span>
+          <span className="opacity-80 text-[9px] sm:text-[11px] mt-0.5 sm:mt-0">(Pemesanan diluar jam operasional akan diproses di hari berikutnya.)</span>
+        </div>
         <div className="max-w-6xl mx-auto px-6 py-2 flex justify-between items-center">
           <div className="flex items-center">
             <img
@@ -578,11 +568,6 @@ export default function LandingPage() {
                       <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "cod" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
                         Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB.
                       </p>
-                      {deliveryMethod === "cod" && (
-                        <div className="mt-3 pt-3 border-t border-[#fff7ec]/20">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#fff7ec]/50">✓ Terpilih</span>
-                        </div>
-                      )}
                     </button>
 
                     {/* Pick Up Option */}
@@ -845,7 +830,7 @@ export default function LandingPage() {
             </span>
             <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Cek Status Pesanan</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
-              Masukkan nama atau nomor HP untuk melihat pesanan Anda
+              Masukkan nomor HP untuk melihat pesanan Anda
             </p>
           </div>
 
@@ -864,7 +849,7 @@ export default function LandingPage() {
                     value={lookupQuery}
                     onChange={(e) => setLookupQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                    placeholder="Nama atau nomor HP..."
+                    placeholder="Nomor HP..."
                     className="w-full pl-12 pr-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
                   />
                 </div>
@@ -888,7 +873,7 @@ export default function LandingPage() {
                   {lookupResults.length === 0 ? (
                     <div className="text-center py-10 px-6 bg-[#fff7ec] rounded-2xl border-2 border-dashed border-[#442f2a]/15">
                       <div className="text-3xl mb-3">📭</div>
-                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden" /> Coba dengan nama atau nomor HP lain.</p>
+                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden" /> Coba dengan nomor HP lain.</p>
                     </div>
                   ) : (
                     lookupResults.map((order) => (
@@ -906,11 +891,13 @@ export default function LandingPage() {
                               }`}>
                               {order.payment_status === "unpaid" ? "Belum Bayar" : order.payment_status === "paid_qris" ? "QRIS ✓" : "Cash ✓"}
                             </span>
-                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${order.production_status === "pending"
+                            <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${order.production_status?.toLowerCase() === "pending"
                                 ? "bg-amber-100 text-amber-700"
+                                : order.production_status?.toLowerCase() === "batal"
+                                ? "bg-red-100 text-red-700"
                                 : "bg-green-100 text-green-700"
                               }`}>
-                              {order.production_status === "pending" ? "⏳ Proses" : "✅ Selesai"}
+                              {order.production_status?.toLowerCase() === "pending" ? "⏳ Proses" : order.production_status?.toLowerCase() === "batal" ? "❌ Batal" : "✅ Selesai"}
                             </span>
                           </div>
                         </div>
