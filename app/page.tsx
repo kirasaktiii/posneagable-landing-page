@@ -2,16 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { createClient } from "@supabase/supabase-js";
-
-// Supabase credentials (Hardcoded agar instan)
-const SUPABASE_URL = "https://xibphltzzayddzaltyqd.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_YwKLp-iU1krV6AwWvAjxvA_rarL3gkT";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { formatWIB } from "@/lib/datetime";
+import { supabaseClient } from "@/lib/supabase/client";
 
 interface Category {
   id: string;
+  name: string;
+}
+
+interface ProductCategory {
   name: string;
 }
 
@@ -22,8 +21,8 @@ interface Product {
   stock: number;
   is_active?: boolean;
   image_url?: string | null;
-  category_id?: any;
-  categories?: any;
+  category_id?: string | null;
+  categories?: ProductCategory | ProductCategory[] | null;
 }
 
 interface CartItem {
@@ -36,13 +35,22 @@ interface OrderResult {
   customer_name: string;
   wa_number: string;
   address: string;
+  notes?: string;
   items: { name: string; qty: number; price: number }[];
   total_qty: number;
   total_price: number;
+  qris_fee?: number;
+  unique_code?: number;
   payment_status: string;
   production_status: string;
   delivery_method: string;
-  created_at: string;
+  created_at: string | null;
+  updated_at?: string | null;
+}
+
+interface CreateOrderResponse {
+  order?: OrderResult;
+  error?: string;
 }
 
 export default function LandingPage() {
@@ -54,10 +62,12 @@ export default function LandingPage() {
   const [customerName, setCustomerName] = useState("");
   const [waNumber, setWaNumber] = useState("");
   const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [generatedWaUrl, setGeneratedWaUrl] = useState("");
+  const [latestOrderCreatedAt, setLatestOrderCreatedAt] = useState<string | null>(null);
   const [deliveryMethod, setDeliveryMethod] = useState<"do" | "cod" | "pickup">("do");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,7 +83,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchData = async () => {
       // Ambil categories
-      const { data: catData } = await supabase
+      const { data: catData } = await supabaseClient
         .from("categories")
         .select("id, name")
         .order("name", { ascending: true });
@@ -81,7 +91,7 @@ export default function LandingPage() {
       if (catData) setCategories(catData);
 
       // Ambil products dengan relasi ke categories
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from("products")
         .select("id, name, price, stock, is_active, image_url, category_id, categories(name)")
         .order("name", { ascending: true });
@@ -89,7 +99,7 @@ export default function LandingPage() {
       if (error) {
         console.error("Error fetching products:", error);
       } else {
-        setProducts((data as any) || []);
+        setProducts((data as Product[]) || []);
       }
       setLoading(false);
     };
@@ -144,33 +154,60 @@ export default function LandingPage() {
     }
 
     setIsSubmitting(true);
+    setLatestOrderCreatedAt(null);
 
-    // Struktur data presisi sesuai model Flutter untuk po_orders
-    // Data ini akan dikirimkan via WA ke Admin tanpa insert ke Supabase
+    // Persist through Next.js API so server owns UTC timestamp creation/serialization.
     const orderData = {
       customer_name: customerName,
       wa_number: waNumber,
       address: address,
+      notes: notes,
       items: cart.map((item) => ({
         name: item.product.name,
         qty: item.qty,
         price: item.product.price,
       })),
       total_qty,
-      total_price,
+      total_price: total_price + 500,
+      qris_fee: 500,
+      unique_code: 0, // akan di-generate saat pembayaran QRIS di app
       delivery_method: deliveryMethod,
       payment_status: "unpaid",
       production_status: "pending",
     };
 
-    // Insert ke tabel po_orders
-    const { error } = await supabase.from("po_orders").insert([orderData]);
-
-    if (error) {
-      alert("Terjadi kesalahan saat menyimpan pesanan: " + error.message);
+    let createOrderResponse: Response;
+    try {
+      createOrderResponse = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+    } catch (error) {
+      console.error("Create order failed:", error);
+      alert("Terjadi kesalahan saat menyimpan pesanan. Coba lagi.");
       setIsSubmitting(false);
       return;
     }
+
+    const createOrderPayload = (await createOrderResponse
+      .json()
+      .catch(() => null)) as CreateOrderResponse | null;
+
+    if (!createOrderResponse.ok) {
+      alert(
+        "Terjadi kesalahan saat menyimpan pesanan: " +
+          (createOrderPayload?.error ?? "Unknown error")
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    const createdAtUtc = createOrderPayload?.order?.created_at ?? null;
+    const createdAtWIB = createdAtUtc ? `${formatWIB(createdAtUtc)} WIB` : "-";
+    setLatestOrderCreatedAt(createdAtUtc);
 
     // ==========================================
     // PENGINGAT: Ganti nomor WA di bawah ini dengan nomor Admin
@@ -187,7 +224,7 @@ export default function LandingPage() {
         ? "COD (Ketemu di Alun-Alun Mojokerto)"
         : "Pick Up (Ambil di Tempat)";
 
-    const waMessage = `Halo Admin, saya mau order & minta barcode QRIS:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n- Metode: ${deliveryText}\n\n*Pesanan:*\n${itemsText}\n\n*Total Tagihan: ${formatRupiah(total_price)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`;
+    const waMessage = `Halo Admin, saya mau order & minta barcode QRIS:\n- Nama: ${customerName}\n- WA: ${waNumber}\n- Alamat: ${address}\n- Metode: ${deliveryText}\n- Waktu Order: ${createdAtWIB}${notes ? `\n- Catatan: ${notes}` : ""}\n\n*Pesanan:*\n${itemsText}\n\n*Biaya Layanan/QRIS: ${formatRupiah(500)}*\n*Total Tagihan: ${formatRupiah(total_price + 500)}*\n\nMohon kirimkan barcode QRIS untuk pembayaran. Terima kasih.`;
 
     const waUrl = `https://wa.me/${adminPhoneNumber}?text=${encodeURIComponent(waMessage)}`;
 
@@ -198,6 +235,7 @@ export default function LandingPage() {
     setCustomerName("");
     setWaNumber("");
     setAddress("");
+    setNotes("");
     setCart([]);
     setDeliveryMethod("do");
     setIsSubmitting(false);
@@ -212,15 +250,17 @@ export default function LandingPage() {
     const query = lookupQuery.trim();
 
     try {
-      // Search by phone
-      const { data: byPhone } = await supabase
-        .from("po_orders")
-        .select("*")
-        .ilike("wa_number", `%${query}%`)
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const lookupResponse = await fetch(
+        `/api/orders?query=${encodeURIComponent(query)}`,
+        { method: "GET", cache: "no-store" }
+      );
 
-      setLookupResults(byPhone || []);
+      if (!lookupResponse.ok) {
+        setLookupResults([]);
+      } else {
+        const payload = (await lookupResponse.json()) as { orders?: OrderResult[] };
+        setLookupResults(payload.orders || []);
+      }
     } catch (err) {
       console.error("Lookup error:", err);
       setLookupResults([]);
@@ -380,7 +420,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-8">
             {products
               .filter((product) => {
-                const productCategoryName = product.categories?.name || "Lainnya";
+                const productCategoryName = Array.isArray(product.categories)
+                  ? (product.categories[0]?.name ?? "Lainnya")
+                  : (product.categories?.name ?? "Lainnya");
                 const matchCategory = selectedCategory === "Semua" || productCategoryName === selectedCategory;
                 const matchSearch = searchQuery === "" || product.name.toLowerCase().includes(searchQuery.toLowerCase());
                 return matchCategory && matchSearch;
@@ -520,6 +562,16 @@ export default function LandingPage() {
                       onChange={(e) => setAddress(e.target.value)}
                       className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
                       placeholder="Masukkan alamat lengkap (Jalan, RT/RW, Kelurahan, Kecamatan, Kota)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Catatan Tambahan (Opsional)</label>
+                    <textarea
+                      rows={2}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
+                      placeholder="Contoh: Tolong jangan terlalu manis"
                     />
                   </div>
                 </div>
@@ -712,10 +764,24 @@ export default function LandingPage() {
                 {cart.length > 0 && (
                   <div className="bg-[#442f2a] p-6 sm:p-8 rounded-[2rem] flex flex-col border border-[#442f2a] gap-5 mt-8 shadow-xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-40 h-40 bg-gradient-to-bl from-rose-500 to-pink-500 blur-3xl rounded-full opacity-20 pointer-events-none group-hover:opacity-40 transition-opacity duration-700"></div>
-                    <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-2 sm:gap-0 relative z-10">
+                    <div className="flex flex-col gap-2 relative z-10 border-b border-white/20 pb-4">
+                      <div className="flex justify-between items-center w-full">
+                        <span className="text-[#fff7ec]/70 font-medium text-sm">Subtotal Pesanan</span>
+                        <span className="text-lg font-bold text-[#fff7ec]">
+                          {formatRupiah(total_price)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center w-full">
+                        <span className="text-[#fff7ec]/70 font-medium text-sm">Biaya Layanan/QRIS</span>
+                        <span className="text-lg font-bold text-[#fff7ec]">
+                          {formatRupiah(500)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-2 sm:gap-0 relative z-10 pt-1">
                       <span className="text-[#fff7ec]/80 font-bold text-sm sm:text-base uppercase tracking-widest">Total Pembayaran</span>
                       <span className="text-3xl sm:text-4xl font-black text-[#fff7ec] drop-shadow-sm">
-                        {formatRupiah(total_price)}
+                        {formatRupiah(total_price + 500)}
                       </span>
                     </div>
                     <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 mt-2 flex gap-3 items-start shadow-sm relative z-10">
@@ -780,6 +846,12 @@ export default function LandingPage() {
               <h3 className="text-2xl font-black text-[#442f2a] mb-2 font-serif">Pesanan Tersimpan! 🎉</h3>
               <p className="text-[#442f2a]/60 font-medium mb-6 leading-relaxed text-sm">
                 Pesanan Anda sudah tersimpan. Silakan minta barcode QRIS ke admin untuk pembayaran.
+              </p>
+              <p className="text-[#442f2a]/50 font-semibold mb-6 text-xs">
+                Waktu pesanan:{" "}
+                <span className="text-[#442f2a]">
+                  {latestOrderCreatedAt ? `${formatWIB(latestOrderCreatedAt)} WIB` : "-"}
+                </span>
               </p>
 
               {/* Tombol Minta QRIS */}
@@ -882,7 +954,9 @@ export default function LandingPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-4 border-b border-[#442f2a]/10">
                           <div>
                             <h5 className="font-black text-[#442f2a] text-base sm:text-lg">{order.customer_name}</h5>
-                            <p className="text-[#442f2a]/50 text-xs font-medium">{new Date(order.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                            <p className="text-[#442f2a]/50 text-xs font-medium">
+                              {order.created_at ? `${formatWIB(order.created_at)} WIB` : "-"}
+                            </p>
                           </div>
                           <div className="flex gap-2">
                             <span className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-full ${order.payment_status === "unpaid"
