@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import DOMPurify from "isomorphic-dompurify";
 import { formatWIB } from "@/lib/datetime";
 import { supabaseClient } from "@/lib/supabase/client";
 
@@ -53,6 +54,10 @@ interface CreateOrderResponse {
   error?: string;
 }
 
+interface CsrfTokenResponse {
+  csrfToken?: string;
+}
+
 export default function LandingPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -68,15 +73,17 @@ export default function LandingPage() {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [generatedWaUrl, setGeneratedWaUrl] = useState("");
   const [latestOrderCreatedAt, setLatestOrderCreatedAt] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState("");
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<"do" | "cod" | "pickup">("do");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Order Lookup State
-  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupPhone, setLookupPhone] = useState("");
   const [lookupResults, setLookupResults] = useState<OrderResult[]>([]);
+  const [lookupMessage, setLookupMessage] = useState("");
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -106,6 +113,44 @@ export default function LandingPage() {
 
     fetchData();
   }, []);
+
+  const sanitizeForRender = (value: string) =>
+    DOMPurify.sanitize(value, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+      KEEP_CONTENT: true,
+    });
+
+  const ensureCsrfToken = async (): Promise<string | null> => {
+    if (csrfToken) {
+      return csrfToken;
+    }
+
+    try {
+      const response = await fetch("/api/csrf", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = (await response.json()) as CsrfTokenResponse;
+      const token = payload.csrfToken?.trim() ?? "";
+
+      if (!token) {
+        return null;
+      }
+
+      setCsrfToken(token);
+      return token;
+    } catch (error) {
+      console.error("Failed to initialize CSRF token:", error);
+      return null;
+    }
+  };
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -148,40 +193,48 @@ export default function LandingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (cart.length === 0) {
       alert("Keranjang pesanan masih kosong. Silakan pilih produk terlebih dahulu.");
+      return;
+    }
+
+    if (!privacyConsent) {
+      alert("Anda wajib menyetujui kebijakan penyimpanan data sebelum memesan.");
+      return;
+    }
+
+    const activeCsrfToken = await ensureCsrfToken();
+    if (!activeCsrfToken) {
+      alert("Gagal menyiapkan token keamanan. Coba muat ulang halaman.");
       return;
     }
 
     setIsSubmitting(true);
     setLatestOrderCreatedAt(null);
 
-    // Persist through Next.js API so server owns UTC timestamp creation/serialization.
     const orderData = {
       customer_name: customerName,
       wa_number: waNumber,
-      address: address,
-      notes: notes,
+      address,
+      notes,
       items: cart.map((item) => ({
-        name: item.product.name,
+        product_id: item.product.id,
         qty: item.qty,
-        price: item.product.price,
       })),
-      total_qty,
-      total_price: total_price + 500,
-      qris_fee: 500,
-      unique_code: 0, // akan di-generate saat pembayaran QRIS di app
       delivery_method: deliveryMethod,
-      payment_status: "unpaid",
-      production_status: "pending",
+      consent_privacy: privacyConsent,
     };
 
     let createOrderResponse: Response;
     try {
       createOrderResponse = await fetch("/api/orders", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRF-Token": activeCsrfToken,
+          "X-Requested-With": "XMLHttpRequest",
         },
         body: JSON.stringify(orderData),
       });
@@ -197,9 +250,15 @@ export default function LandingPage() {
       .catch(() => null)) as CreateOrderResponse | null;
 
     if (!createOrderResponse.ok) {
+      const retryAfter = createOrderResponse.headers.get("Retry-After");
+      const retryMessage =
+        createOrderResponse.status === 429 && retryAfter
+          ? ` Coba lagi dalam ${retryAfter} detik.`
+          : "";
       alert(
         "Terjadi kesalahan saat menyimpan pesanan: " +
-          (createOrderPayload?.error ?? "Unknown error")
+          (createOrderPayload?.error ?? "Unknown error") +
+          retryMessage
       );
       setIsSubmitting(false);
       return;
@@ -237,34 +296,68 @@ export default function LandingPage() {
     setAddress("");
     setNotes("");
     setCart([]);
+    setPrivacyConsent(false);
     setDeliveryMethod("do");
     setIsSubmitting(false);
   };
 
-  // Order Lookup
-  const handleLookup = async () => {
-    if (!lookupQuery.trim()) return;
+  // handleLookupInit removed
+
+  const handleLookupVerify = async () => {
+    const activeCsrfToken = await ensureCsrfToken();
+    if (!activeCsrfToken) {
+      alert("Gagal menyiapkan token keamanan. Coba muat ulang halaman.");
+      return;
+    }
+
+    if (!lookupPhone.trim()) {
+      return;
+    }
+
     setIsLookingUp(true);
     setHasSearched(true);
-
-    const query = lookupQuery.trim();
+    setLookupResults([]);
+    setLookupMessage("");
 
     try {
-      const lookupResponse = await fetch(
-        `/api/orders?query=${encodeURIComponent(query)}`,
-        { method: "GET", cache: "no-store" }
-      );
+      const verifyResponse = await fetch("/api/check-order", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": activeCsrfToken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          action: "verify",
+          phone: lookupPhone,
+        }),
+      });
 
-      if (!lookupResponse.ok) {
+      const payload = (await verifyResponse
+        .json()
+        .catch(() => null)) as
+        | {
+            message?: string;
+            error?: string;
+            verified?: boolean;
+            orders?: OrderResult[];
+          }
+        | null;
+
+      if (!verifyResponse.ok) {
         setLookupResults([]);
+        setLookupMessage(payload?.error ?? "Pencarian pesanan gagal.");
       } else {
-        const payload = (await lookupResponse.json()) as { orders?: OrderResult[] };
-        setLookupResults(payload.orders || []);
+        setLookupResults(payload?.orders ?? []);
+        setLookupMessage(payload?.message ?? "");
       }
     } catch (err) {
-      console.error("Lookup error:", err);
+      console.error("Lookup verify error:", err);
       setLookupResults([]);
+      setLookupMessage("Terjadi kesalahan jaringan saat pencarian.");
     }
+
     setIsLookingUp(false);
   };
 
@@ -534,8 +627,9 @@ export default function LandingPage() {
                       <input
                         type="text"
                         required
+                        maxLength={100}
                         value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        onChange={(e) => setCustomerName(e.target.value.slice(0, 100))}
                         className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
                         placeholder="Contoh: Naegablé"
                       />
@@ -545,6 +639,8 @@ export default function LandingPage() {
                       <input
                         type="tel"
                         required
+                        maxLength={20}
+                        pattern="^(\+62|62|0)8[0-9]{7,13}$"
                         value={waNumber}
                         onChange={(e) => setWaNumber(e.target.value)}
                         className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
@@ -557,9 +653,10 @@ export default function LandingPage() {
                     <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Alamat Pengiriman</label>
                     <textarea
                       required
+                      maxLength={300}
                       rows={3}
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => setAddress(e.target.value.slice(0, 300))}
                       className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
                       placeholder="Masukkan alamat lengkap (Jalan, RT/RW, Kelurahan, Kecamatan, Kota)"
                     />
@@ -567,9 +664,10 @@ export default function LandingPage() {
                   <div className="space-y-2">
                     <label className="block text-sm font-bold text-[#442f2a]/80 pl-1">Catatan Tambahan (Opsional)</label>
                     <textarea
+                      maxLength={300}
                       rows={2}
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      onChange={(e) => setNotes(e.target.value.slice(0, 300))}
                       className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
                       placeholder="Contoh: Tolong jangan terlalu manis"
                     />
@@ -797,10 +895,33 @@ export default function LandingPage() {
                   </div>
                 )}
 
+                <div className="bg-[#fff7ec] border border-[#442f2a]/15 rounded-2xl p-4 sm:p-5">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={privacyConsent}
+                      onChange={(e) => setPrivacyConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-[#442f2a]/30 text-[#442f2a] focus:ring-[#442f2a]/40"
+                      required
+                    />
+                    <span className="text-sm text-[#442f2a]/80 font-medium leading-relaxed">
+                      Saya setuju data saya disimpan untuk keperluan pengiriman pesanan.{" "}
+                      <a
+                        href="/privacy-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-bold hover:text-[#442f2a]"
+                      >
+                        Baca Kebijakan Privasi
+                      </a>
+                    </span>
+                  </label>
+                </div>
+
                 <button
                   type="submit"
-                  disabled={isSubmitting || cart.length === 0}
-                  className={`group w-full py-4 sm:py-5 rounded-[2rem] font-black text-lg sm:text-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 mt-6 relative overflow-hidden border border-[#442f2a] ${isSubmitting || cart.length === 0
+                  disabled={isSubmitting || cart.length === 0 || !privacyConsent}
+                  className={`group w-full py-4 sm:py-5 rounded-[2rem] font-black text-lg sm:text-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 mt-6 relative overflow-hidden border border-[#442f2a] ${isSubmitting || cart.length === 0 || !privacyConsent
                       ? 'bg-[#fff7ec]/80 text-[#442f2a]/40 shadow-none cursor-not-allowed border-[#442f2a]/20'
                       : 'bg-[#f5cbd7] text-[#442f2a] hover:bg-[#eeb1c3] hover:-translate-y-1 hover:shadow-[#f5cbd7]/50 active:scale-[0.98]'
                     }`}
@@ -902,42 +1023,54 @@ export default function LandingPage() {
             </span>
             <h3 className="text-3xl sm:text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Cek Status Pesanan</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto">
-              Masukkan nomor HP untuk melihat pesanan Anda
+              Masukkan nomor HP Anda untuk mengecek status pesanan
             </p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-xl rounded-[2rem] sm:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden border border-white p-2 sm:p-3">
             <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-sm border border-stone-50">
               {/* Search Input */}
-              <div className="flex gap-3 mb-6">
-                <div className="relative flex-1">
+              <div className="space-y-3 mb-6">
+                <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#442f2a]/40">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <input
-                    type="text"
-                    value={lookupQuery}
-                    onChange={(e) => setLookupQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                    placeholder="Nomor HP..."
+                    type="tel"
+                    value={lookupPhone}
+                    onChange={(e) => {
+                      setLookupPhone(e.target.value);
+                      setLookupResults([]);
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleLookupVerify()}
+                    placeholder="Nomor HP (08xx / +62xx)"
                     className="w-full pl-12 pr-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={handleLookup}
-                  disabled={isLookingUp || !lookupQuery.trim()}
-                  className="px-5 sm:px-6 py-4 bg-[#442f2a] text-[#fff7ec] rounded-2xl font-bold hover:bg-[#2e1d1a] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                >
-                  {isLookingUp ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white border-l-2 border-l-transparent border-r-2 border-r-transparent"></div>
-                  ) : (
-                    "Cek"
-                  )}
-                </button>
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={handleLookupVerify}
+                    disabled={isLookingUp || !lookupPhone.trim()}
+                    className="w-full px-5 sm:px-6 py-4 bg-[#f5cbd7] text-[#442f2a] rounded-2xl font-bold hover:bg-[#eeb1c3] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isLookingUp ? (
+                      <div className="mx-auto animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#442f2a] border-l-2 border-l-transparent border-r-2 border-r-transparent"></div>
+                    ) : (
+                      "Cari & Tampilkan Pesanan"
+                    )}
+                  </button>
+                </div>
               </div>
+
+              {lookupMessage && (
+                <div className="mb-6 rounded-2xl border border-[#442f2a]/10 bg-[#fff7ec] px-4 py-3 text-sm font-medium text-[#442f2a]/70">
+                  {lookupMessage}
+                </div>
+              )}
 
               {/* Results */}
               {hasSearched && (
@@ -945,7 +1078,11 @@ export default function LandingPage() {
                   {lookupResults.length === 0 ? (
                     <div className="text-center py-10 px-6 bg-[#fff7ec] rounded-2xl border-2 border-dashed border-[#442f2a]/15">
                       <div className="text-3xl mb-3">📭</div>
-                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">Pesanan tidak ditemukan.<br className="sm:hidden" /> Coba dengan nomor HP lain.</p>
+                      <p className="text-[#442f2a]/50 font-medium text-sm leading-relaxed">
+                        {lookupResults.length === 0 && isLookingUp
+                          ? "Mencari pesanan..."
+                          : "Pesanan tidak ditemukan."}
+                      </p>
                     </div>
                   ) : (
                     lookupResults.map((order) => (
@@ -953,7 +1090,7 @@ export default function LandingPage() {
                         {/* Header */}
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-4 border-b border-[#442f2a]/10">
                           <div>
-                            <h5 className="font-black text-[#442f2a] text-base sm:text-lg">{order.customer_name}</h5>
+                            <h5 className="font-black text-[#442f2a] text-base sm:text-lg">{sanitizeForRender(order.customer_name)}</h5>
                             <p className="text-[#442f2a]/50 text-xs font-medium">
                               {order.created_at ? `${formatWIB(order.created_at)} WIB` : "-"}
                             </p>
@@ -980,11 +1117,11 @@ export default function LandingPage() {
                         <div className="space-y-2 mb-4">
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-[#442f2a]/40 shrink-0">📱</span>
-                            <span className="text-[#442f2a]/70 font-medium">{order.wa_number}</span>
+                            <span className="text-[#442f2a]/70 font-medium">{sanitizeForRender(order.wa_number)}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-[#442f2a]/40 shrink-0">📍</span>
-                            <span className="text-[#442f2a]/70 font-medium">{order.address}</span>
+                            <span className="text-[#442f2a]/70 font-medium">{sanitizeForRender(order.address)}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-[#442f2a]/40 shrink-0">
@@ -1000,7 +1137,7 @@ export default function LandingPage() {
                         <div className="bg-white rounded-xl p-3 sm:p-4 space-y-2 mb-3">
                           {(order.items as { name: string; qty: number; price: number }[]).map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center text-sm">
-                              <span className="text-[#442f2a]/80 font-medium">{item.name} x{item.qty}</span>
+                              <span className="text-[#442f2a]/80 font-medium">{sanitizeForRender(item.name)} x{item.qty}</span>
                               <span className="text-[#442f2a] font-bold">{formatRupiah(item.price * item.qty)}</span>
                             </div>
                           ))}
@@ -1138,6 +1275,12 @@ export default function LandingPage() {
             <h2 className="text-2xl font-black text-[#442f2a] tracking-tight">Naegablé</h2>
           </div>
           <p className="font-medium text-sm text-[#442f2a]/60">&copy; {new Date().getFullYear()} Naegablé Landing Page. All rights reserved.</p>
+          <a
+            href="/privacy-policy"
+            className="mt-3 inline-block text-sm font-bold text-[#442f2a]/70 underline hover:text-[#442f2a]"
+          >
+            Kebijakan Privasi
+          </a>
         </div>
       </footer>
     </div>
