@@ -1,7 +1,21 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { attachRateLimitHeaders, limitOrderSubmitByPhone } from "@/lib/security/rate-limit";
+import { validatePostRequestSecurity } from "@/lib/security/request";
+import { sanitizePlainText } from "@/lib/security/sanitize";
+import {
+  maskPhone,
+  sanitizeAddress,
+  sanitizeName,
+  sanitizeNotes,
+  validateIndonesiaPhone,
+} from "@/lib/security/validation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const runtime = "nodejs";
+
+const QRIS_FEE = 500;
 
 const ORDER_SELECT_FIELDS = [
   "id",
@@ -23,41 +37,41 @@ const ORDER_SELECT_FIELDS = [
 
 type DeliveryMethod = "do" | "cod" | "pickup";
 
-type OrderItem = {
+type ProductLine = {
+  product_id: string;
+  qty: number;
+};
+
+type OrderItemSnapshot = {
   name: string;
   qty: number;
   price: number;
 };
 
-type CreateOrderPayload = {
-  customer_name: string;
-  wa_number: string;
-  address: string;
-  notes: string;
-  items: OrderItem[];
-  total_qty: number;
-  total_price: number;
-  qris_fee: number;
-  unique_code: number;
-  delivery_method: DeliveryMethod;
-  payment_status: string;
-  production_status: string;
+type CreateOrderInput = {
+  customer_name: unknown;
+  wa_number: unknown;
+  address: unknown;
+  notes: unknown;
+  items: unknown;
+  delivery_method: unknown;
+  consent_privacy: unknown;
 };
 
-type ValidationResult =
-  | { ok: true; payload: CreateOrderPayload }
-  | { ok: false; message: string };
+type ProductRow = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  is_active: boolean | null;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function toSafeNumber(value: unknown, fallback = 0): number {
-  if (typeof value !== "number") {
-    return fallback;
-  }
-
-  if (!Number.isFinite(value)) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
     return fallback;
   }
 
@@ -85,12 +99,46 @@ function toNullableTimestampString(value: unknown): string | null {
     return null;
   }
 
-  const text = toSafeString(value);
+  const text = toSafeString(value).trim();
   return text || null;
 }
 
-function normalizeItems(items: unknown): OrderItem[] {
-  const rawItems =
+function parseProductLines(rawItems: unknown): ProductLine[] {
+  const parsedItems =
+    typeof rawItems === "string"
+      ? (() => {
+          try {
+            return JSON.parse(rawItems);
+          } catch {
+            return [];
+          }
+        })()
+      : rawItems;
+
+  if (!Array.isArray(parsedItems)) {
+    return [];
+  }
+
+  return parsedItems
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const productId = sanitizePlainText(item.product_id, { maxLength: 64 });
+      const qty = Math.trunc(toSafeNumber(item.qty));
+
+      if (!productId || qty <= 0 || qty > 100) {
+        return null;
+      }
+
+      return { product_id: productId, qty };
+    })
+    .filter((value): value is ProductLine => value !== null);
+}
+
+function normalizeOrderSnapshotItems(items: unknown): OrderItemSnapshot[] {
+  const parsedItems =
     typeof items === "string"
       ? (() => {
           try {
@@ -101,175 +149,231 @@ function normalizeItems(items: unknown): OrderItem[] {
         })()
       : items;
 
-  if (!Array.isArray(rawItems)) {
+  if (!Array.isArray(parsedItems)) {
     return [];
   }
 
-  return rawItems
+  return parsedItems
     .map((item) => {
-      if (!item || typeof item !== "object") {
+      if (!isRecord(item)) {
         return null;
       }
 
-      const candidate = item as Record<string, unknown>;
-      const name = toSafeString(candidate.name).trim();
-      const qty = toSafeNumber(candidate.qty);
-      const price = toSafeNumber(candidate.price);
-
+      const name = sanitizePlainText(item.name, { maxLength: 100 });
+      const qty = Math.trunc(toSafeNumber(item.qty));
+      const price = toSafeNumber(item.price);
       if (!name || qty <= 0 || price < 0) {
         return null;
       }
 
       return { name, qty, price };
     })
-    .filter((item): item is OrderItem => item !== null);
-}
-
-function validateCreateOrderPayload(input: unknown): ValidationResult {
-  if (!input || typeof input !== "object") {
-    return { ok: false, message: "Invalid request payload." };
-  }
-
-  const body = input as Record<string, unknown>;
-
-  const customer_name = toSafeString(body.customer_name).trim();
-  const wa_number = toSafeString(body.wa_number).trim();
-  const address = toSafeString(body.address).trim();
-  const notes = toSafeString(body.notes).trim();
-  const delivery_method = toSafeString(body.delivery_method) as DeliveryMethod;
-  const payment_status = toSafeString(body.payment_status).trim() || "unpaid";
-  const production_status =
-    toSafeString(body.production_status).trim() || "pending";
-
-  const items = normalizeItems(body.items);
-  const total_qty = toSafeNumber(body.total_qty);
-  const total_price = toSafeNumber(body.total_price);
-  const qris_fee = toSafeNumber(body.qris_fee);
-  const unique_code = toSafeNumber(body.unique_code);
-
-  if (!customer_name || !wa_number || !address) {
-    return { ok: false, message: "Customer data is incomplete." };
-  }
-
-  if (items.length === 0) {
-    return { ok: false, message: "Order items are empty." };
-  }
-
-  if (delivery_method !== "do" && delivery_method !== "cod" && delivery_method !== "pickup") {
-    return { ok: false, message: "Unsupported delivery method." };
-  }
-
-  if (total_qty <= 0 || total_price <= 0) {
-    return { ok: false, message: "Order totals are invalid." };
-  }
-
-  return {
-    ok: true,
-    payload: {
-      customer_name,
-      wa_number,
-      address,
-      notes,
-      items,
-      total_qty,
-      total_price,
-      qris_fee,
-      unique_code,
-      delivery_method,
-      payment_status,
-      production_status,
-    },
-  };
+    .filter((value): value is OrderItemSnapshot => value !== null);
 }
 
 function serializeOrderRow(row: Record<string, unknown>) {
+  const normalizedPhone = toSafeString(row.wa_number).replace(/\D/g, "");
+  const maskedPhone = normalizedPhone ? maskPhone(normalizedPhone) : "";
+
   return {
     id: toSafeString(row.id),
-    customer_name: toSafeString(row.customer_name),
-    wa_number: toSafeString(row.wa_number),
-    address: toSafeString(row.address),
-    notes: toSafeString(row.notes),
-    items: normalizeItems(row.items),
+    customer_name: sanitizePlainText(row.customer_name, { maxLength: 100 }),
+    wa_number: maskedPhone,
+    address: sanitizePlainText(row.address, {
+      maxLength: 300,
+      preserveLineBreaks: true,
+    }),
+    notes: sanitizePlainText(row.notes, {
+      maxLength: 300,
+      preserveLineBreaks: true,
+    }),
+    items: normalizeOrderSnapshotItems(row.items),
     total_qty: toSafeNumber(row.total_qty),
     total_price: toSafeNumber(row.total_price),
     qris_fee: toSafeNumber(row.qris_fee),
     unique_code: toSafeNumber(row.unique_code),
-    delivery_method: toSafeString(row.delivery_method),
-    payment_status: toSafeString(row.payment_status),
-    production_status: toSafeString(row.production_status),
+    delivery_method: sanitizePlainText(row.delivery_method, { maxLength: 20 }),
+    payment_status: sanitizePlainText(row.payment_status, { maxLength: 40 }),
+    production_status: sanitizePlainText(row.production_status, { maxLength: 40 }),
     created_at: toNullableTimestampString(row.created_at),
     updated_at: toNullableTimestampString(row.updated_at),
   };
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const query = (searchParams.get("query") ?? "").trim().slice(0, 30);
-
-  if (!query) {
-    return Response.json({ orders: [] });
+function validateCreateOrderInput(body: unknown) {
+  if (!isRecord(body)) {
+    return { ok: false as const, message: "Payload tidak valid." };
   }
 
-  const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("po_orders")
-    .select(ORDER_SELECT_FIELDS)
-    .ilike("wa_number", `%${query}%`)
-    .order("created_at", { ascending: false })
-    .limit(10);
+  const payload = body as CreateOrderInput;
+  const customerName = sanitizeName(payload.customer_name);
+  const phoneValidation = validateIndonesiaPhone(payload.wa_number);
+  const address = sanitizeAddress(payload.address);
+  const notes = sanitizeNotes(payload.notes);
+  const items = parseProductLines(payload.items);
+  const deliveryMethod = sanitizePlainText(payload.delivery_method, { maxLength: 20 });
+  const consentPrivacy = payload.consent_privacy === true;
 
-  if (error) {
-    return Response.json(
-      { error: "Failed to fetch orders." },
+  if (!customerName) {
+    return { ok: false as const, message: "Nama lengkap wajib diisi." };
+  }
+
+  if (!phoneValidation.ok) {
+    return { ok: false as const, message: phoneValidation.message };
+  }
+
+  if (!address) {
+    return { ok: false as const, message: "Alamat wajib diisi." };
+  }
+
+  if (!consentPrivacy) {
+    return {
+      ok: false as const,
+      message: "Persetujuan penyimpanan data wajib dicentang.",
+    };
+  }
+
+  if (deliveryMethod !== "do" && deliveryMethod !== "cod" && deliveryMethod !== "pickup") {
+    return { ok: false as const, message: "Metode pengiriman tidak didukung." };
+  }
+
+  if (items.length === 0) {
+    return { ok: false as const, message: "Keranjang pesanan kosong." };
+  }
+
+  return {
+    ok: true as const,
+    value: {
+      customerName,
+      phone: phoneValidation.normalized,
+      address,
+      notes,
+      items,
+      deliveryMethod: deliveryMethod as DeliveryMethod,
+      consentPrivacy,
+    },
+  };
+}
+
+export async function POST(request: Request) {
+  const guardError = await validatePostRequestSecurity();
+  if (guardError) {
+    return guardError;
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON tidak valid." }, { status: 400 });
+  }
+
+  const validated = validateCreateOrderInput(body);
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.message }, { status: 400 });
+  }
+
+  const phoneLimit = await limitOrderSubmitByPhone(validated.value.phone);
+  if (!phoneLimit.success) {
+    const rateLimited = NextResponse.json(
+      { error: "Batas kirim pesanan untuk nomor ini tercapai. Coba lagi nanti." },
+      { status: 429 }
+    );
+    return attachRateLimitHeaders(rateLimited, phoneLimit);
+  }
+
+  const supabase = createSupabaseServiceRoleClient();
+  const productIds = [...new Set(validated.value.items.map((item) => item.product_id))];
+  const { data: rawProducts, error: productsError } = await supabase
+    .from("products")
+    .select("id, name, price, stock, is_active")
+    .in("id", productIds);
+
+  if (productsError) {
+    return NextResponse.json(
+      { error: "Gagal memuat data produk untuk validasi pesanan." },
       { status: 500 }
     );
   }
 
-  const rows = Array.isArray(data) ? data : [];
-  const orders = rows.flatMap((row) =>
-    isRecord(row) ? [serializeOrderRow(row)] : []
-  );
+  const productRows = (rawProducts ?? []) as ProductRow[];
+  const productMap = new Map(productRows.map((product) => [product.id, product]));
 
-  return Response.json({ orders });
-}
+  const orderItems: OrderItemSnapshot[] = [];
+  let totalQty = 0;
+  let subtotalPrice = 0;
 
-export async function POST(request: Request) {
-  let rawBody: unknown;
-  try {
-    rawBody = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON body." }, { status: 400 });
+  for (const line of validated.value.items) {
+    const product = productMap.get(line.product_id);
+
+    if (!product || product.is_active === false) {
+      return NextResponse.json(
+        { error: "Ada produk yang tidak tersedia lagi. Silakan refresh katalog." },
+        { status: 400 }
+      );
+    }
+
+    if (line.qty > product.stock) {
+      return NextResponse.json(
+        { error: `Stok untuk ${product.name} tidak mencukupi.` },
+        { status: 400 }
+      );
+    }
+
+    const safeName = sanitizePlainText(product.name, { maxLength: 100 });
+    const safePrice = toSafeNumber(product.price);
+
+    orderItems.push({
+      name: safeName,
+      qty: line.qty,
+      price: safePrice,
+    });
+
+    totalQty += line.qty;
+    subtotalPrice += safePrice * line.qty;
   }
 
-  const validated = validateCreateOrderPayload(rawBody);
-  if (!validated.ok) {
-    return Response.json({ error: validated.message }, { status: 400 });
-  }
+  const totalPrice = subtotalPrice + QRIS_FEE;
 
-  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("po_orders")
-    // created_at/updated_at are now managed by DB defaults + trigger.
-    .insert([validated.payload])
+    .insert([
+      {
+        customer_name: validated.value.customerName,
+        wa_number: validated.value.phone,
+        address: validated.value.address,
+        notes: validated.value.notes,
+        items: orderItems,
+        total_qty: totalQty,
+        total_price: totalPrice,
+        qris_fee: QRIS_FEE,
+        unique_code: 0,
+        delivery_method: validated.value.deliveryMethod,
+        payment_status: "unpaid",
+        production_status: "pending",
+      },
+    ])
     .select(ORDER_SELECT_FIELDS)
     .single();
 
   if (error) {
-    return Response.json(
-      { error: "Failed to create order." },
+    console.error("Supabase Insert Error:", error);
+    return NextResponse.json(
+      { error: "Gagal menyimpan pesanan. Detail: " + error.message },
       { status: 500 }
     );
   }
 
   if (!isRecord(data)) {
-    return Response.json(
-      { error: "Order created but response format is invalid." },
+    return NextResponse.json(
+      { error: "Pesanan tersimpan, tapi format respons tidak valid." },
       { status: 500 }
     );
   }
 
-  return Response.json(
+  const response = NextResponse.json(
     { order: serializeOrderRow(data) },
     { status: 201 }
   );
+  return attachRateLimitHeaders(response, phoneLimit);
 }
