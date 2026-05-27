@@ -89,6 +89,7 @@ export default function LandingPage() {
   const [lookupResults, setLookupResults] = useState<OrderResult[]>([]);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -145,6 +146,14 @@ export default function LandingPage() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(number);
+  };
+
+  const storeAddress = "Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364";
+  
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(storeAddress);
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
   };
 
   // Tambah ke keranjang
@@ -306,7 +315,7 @@ export default function LandingPage() {
       <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 transition-all border-b border-[#442f2a]/10">
         <div className="bg-[#f5cbd7] text-[#442f2a] text-[10px] sm:text-xs py-1.5 px-4 text-center w-full font-medium tracking-wide shadow-sm flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-1.5">
           <span><span className="animate-pulse mr-1"></span><strong>Operational hours:</strong> Senin-Jumat, 09.00 - 14.00 WIB</span>
-          <span className="opacity-80 text-[9px] sm:text-[11px] mt-0.5 sm:mt-0">(Pemesanan diluar jam operasional akan diproses di hari berikutnya.)</span>
+          <span className="opacity-80 text-[9px] sm:text-[11px] mt-0.5 sm:mt-0">(Pemesanan diluar jam operasional akan diproses di hari berikutnya)</span>
         </div>
         <div className="max-w-6xl mx-auto px-6 py-2 flex justify-between items-center">
           <div className="flex items-center">
@@ -345,7 +354,7 @@ export default function LandingPage() {
           <h2 className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 sm:mb-8 leading-[1.1] tracking-tight text-[#442f2a] font-serif">
             Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#f790b2] drop-shadow-sm">& Dessert</span>
           </h2>
-          <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2 capitalize">
+          <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2">
             Made by order & freshly baked
           </p>
           <div className="flex flex-wrap justify-center gap-4">
@@ -362,7 +371,7 @@ export default function LandingPage() {
       {/* Catalog Section */}
       <section id="catalog" className="max-w-6xl mx-auto px-3 sm:px-6 py-12 sm:py-24 scroll-mt-20">
         <div className="text-center mb-10">
-          <h3 className="text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Our Menu!!</h3>
+          <h3 className="text-4xl font-black text-[#442f2a] mb-4 tracking-tight font-serif">Our Menu</h3>
           <p className="text-lg text-[#442f2a]/60 max-w-xl mx-auto font-medium">Pilih dessert favoritmu di bawah ini</p>
         </div>
 
@@ -541,7 +550,7 @@ export default function LandingPage() {
             <span className="inline-block py-1.5 px-4 rounded-full bg-white border border-[#442f2a]/20 text-[#442f2a] text-xs sm:text-sm font-bold tracking-widest uppercase mb-4 shadow-sm">
               Checkout
             </span>
-            <h3 className="text-4xl sm:text-5xl font-black text-[#442f2a] mb-4 sm:mb-6 tracking-tight font-serif">Pesan Manisanmu 💌</h3>
+            <h3 className="text-4xl sm:text-5xl font-black text-[#442f2a] mb-4 sm:mb-6 tracking-tight font-serif">Pesan Disini! 💌</h3>
             <p className="text-[#442f2a]/60 text-base sm:text-lg font-medium max-w-2xl mx-auto px-4">
               Lengkapi data di bawah ini. Pesanan Anda akan kami simpan dan diteruskan langsung ke WhatsApp Admin kami.
             </p>
@@ -603,7 +612,7 @@ export default function LandingPage() {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
-                      placeholder="Contoh: Tolong jangan terlalu manis"
+                      placeholder="Contoh: Tolong kreseknya dipisah"
                     />
                   </div>
                 </div>
@@ -642,7 +651,7 @@ export default function LandingPage() {
                             ? "text-[#fff7ec]/80"
                             : "text-[#442f2a]/60"
                         }`}>
-                        {!deliverySettings.do ? "Metode ini sedang tidak tersedia." : "Pesan kurir mandiri. Wajib share live location kurir ke toko."}
+                        {!deliverySettings.do ? "Metode ini sedang tidak tersedia." : "Memesan kurir gosend/shopee sendiri. Jika sudah memesan, wajib membagikan lokasi kurir ke toko."}
                       </p>
                     </button>
 
@@ -719,11 +728,21 @@ export default function LandingPage() {
                   {deliveryMethod === "do" && (
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
                       <span className="text-xl shrink-0">📦</span>
-                      <div>
+                      <div className="w-full">
                         <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order (DO)</p>
-                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed mb-3">
                           Anda harus memesan kurir secara mandiri. Mohon <span className="font-bold">wajib membagikan tautan (link) live location kurir</span> kepada pihak toko agar pesanan bisa diserahkan ke kurir yang tepat.
                         </p>
+                        <div className="bg-white/60 p-3 rounded-xl border border-blue-100 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+                          <p className="text-xs text-[#442f2a]/80 leading-relaxed font-medium">{storeAddress}</p>
+                          <button
+                            type="button"
+                            onClick={handleCopyAddress}
+                            className="text-xs px-3 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap active:scale-95 flex items-center gap-1.5"
+                          >
+                            {copiedAddress ? "Tersalin! ✓" : "Salin Alamat 📋"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -731,11 +750,21 @@ export default function LandingPage() {
                   {deliveryMethod === "pickup" && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
                       <span className="text-xl shrink-0">🏪</span>
-                      <div>
+                      <div className="w-full">
                         <p className="font-bold text-[#442f2a] text-sm mb-1">Info Pick Up (Ambil di Tempat)</p>
-                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed mb-3">
                           Anda bisa mengambil pesanannya sendiri. Jam operasional untuk pick up adalah dari pukul <span className="font-bold">09:00 WIB hingga 15:00 WIB</span>.
                         </p>
+                        <div className="bg-white/60 p-3 rounded-xl border border-emerald-100 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+                          <p className="text-xs text-[#442f2a]/80 leading-relaxed font-medium">{storeAddress}</p>
+                          <button
+                            type="button"
+                            onClick={handleCopyAddress}
+                            className="text-xs px-3 py-2 bg-emerald-100 text-emerald-700 font-bold rounded-lg hover:bg-emerald-200 transition-colors whitespace-nowrap active:scale-95 flex items-center gap-1.5"
+                          >
+                            {copiedAddress ? "Tersalin! ✓" : "Salin Alamat 📋"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1144,42 +1173,57 @@ export default function LandingPage() {
                   className="rounded-[1.5rem] sm:rounded-[2.5rem]"
                 ></iframe>
               </div>
-              <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi Pick-Up & DO Naegablé</h4>
-                  <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
+              <div className="p-5 sm:p-8 flex flex-col gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi Pick-Up & DO Naegablé</h4>
+                    <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href="https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-xl font-bold text-sm hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Buka di Google Maps
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
+                        const shareText = "📍 Lokasi Pick-Up & DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
+                        if (navigator.share) {
+                          navigator.share({ title: "Lokasi Pick-Up & DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
+                        } else {
+                          navigator.clipboard.writeText(shareText);
+                          alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
+                        }
+                      }}
+                      className="w-11 h-11 flex items-center justify-center bg-[#f5cbd7] text-[#442f2a] rounded-xl hover:bg-[#eeb1c3] transition-all active:scale-95 border border-[#442f2a]/20"
+                      title="Share ke Kurir"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <a
-                    href="https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-xl font-bold text-sm hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Buka di Google Maps
-                  </a>
+
+                <div className="bg-[#442f2a]/5 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <p className="text-sm text-[#442f2a]/80 font-medium leading-relaxed">
+                    {storeAddress}
+                  </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
-                      const shareText = "📍 Lokasi Pick-Up & DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
-                      if (navigator.share) {
-                        navigator.share({ title: "Lokasi Pick-Up & DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
-                      } else {
-                        navigator.clipboard.writeText(shareText);
-                        alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
-                      }
-                    }}
-                    className="w-11 h-11 flex items-center justify-center bg-[#f5cbd7] text-[#442f2a] rounded-xl hover:bg-[#eeb1c3] transition-all active:scale-95 border border-[#442f2a]/20"
-                    title="Share ke Kurir"
+                    onClick={handleCopyAddress}
+                    className="text-sm px-4 py-2 bg-white text-[#442f2a] font-bold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap shrink-0 border border-[#442f2a]/10"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
+                    {copiedAddress ? "Tersalin! ✓" : "Salin Alamat 📋"}
                   </button>
                 </div>
               </div>
