@@ -53,9 +53,19 @@ interface CreateOrderResponse {
   error?: string;
 }
 
+interface DeliverySetting {
+  method: string;
+  is_active: boolean;
+}
+
 export default function LandingPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [deliverySettings, setDeliverySettings] = useState<Record<string, boolean>>({
+    do: true,
+    cod: true,
+    pickup: true,
+  });
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -101,6 +111,28 @@ export default function LandingPage() {
       } else {
         setProducts((data as Product[]) || []);
       }
+
+      // Ambil delivery settings
+      const { data: deliveryData, error: deliveryError } = await supabaseClient
+        .from("delivery_settings")
+        .select("method, is_active");
+
+      if (!deliveryError && deliveryData) {
+        const settingsMap: Record<string, boolean> = {};
+        deliveryData.forEach((setting: DeliverySetting) => {
+          settingsMap[setting.method] = setting.is_active;
+        });
+        setDeliverySettings((prev) => ({ ...prev, ...settingsMap }));
+
+        // Jika metode "do" tidak aktif, pindah ke metode pertama yang aktif
+        if (settingsMap["do"] === false) {
+          const activeMethods = ["do", "cod", "pickup"].filter((m) => settingsMap[m] !== false);
+          if (activeMethods.length > 0) {
+            setDeliveryMethod(activeMethods[0] as "do" | "cod" | "pickup");
+          }
+        }
+      }
+
       setLoading(false);
     };
 
@@ -589,54 +621,84 @@ export default function LandingPage() {
                     {/* DO Option */}
                     <button
                       type="button"
+                      disabled={!deliverySettings.do}
                       onClick={() => setDeliveryMethod("do")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${deliveryMethod === "do"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                          !deliverySettings.do
+                            ? "border-[#442f2a]/5 bg-[#442f2a]/5 opacity-60 cursor-not-allowed grayscale"
+                            : deliveryMethod === "do"
+                            ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg active:scale-[0.98]"
+                            : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a] active:scale-[0.98]"
                         }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-2xl">🚚</span>
-                        <span className="font-black text-lg">DO (Delivery Order)</span>
+                        <span className={`font-black text-lg ${!deliverySettings.do ? "text-[#442f2a]/50" : ""}`}>DO (Delivery Order)</span>
                       </div>
-                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "do" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Pesan kurir mandiri. Wajib share live location kurir ke toko.
+                      <p className={`text-sm font-medium leading-relaxed ${
+                          !deliverySettings.do
+                            ? "text-[#442f2a]/40"
+                            : deliveryMethod === "do"
+                            ? "text-[#fff7ec]/80"
+                            : "text-[#442f2a]/60"
+                        }`}>
+                        {!deliverySettings.do ? "Metode ini sedang tidak tersedia." : "Pesan kurir mandiri. Wajib share live location kurir ke toko."}
                       </p>
                     </button>
 
                     {/* COD Option */}
                     <button
                       type="button"
+                      disabled={!deliverySettings.cod}
                       onClick={() => setDeliveryMethod("cod")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] group/btn ${deliveryMethod === "cod"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a]"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all group/btn ${
+                          !deliverySettings.cod
+                            ? "border-[#442f2a]/5 bg-[#442f2a]/5 opacity-60 cursor-not-allowed grayscale"
+                            : deliveryMethod === "cod"
+                            ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg shadow-[#442f2a]/20 active:scale-[0.98]"
+                            : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 hover:shadow-md text-[#442f2a] active:scale-[0.98]"
                         }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl group-hover/btn:scale-110 transition-transform">🤝</span>
-                        <span className="font-black text-lg">COD</span>
+                        <span className={`text-2xl ${deliverySettings.cod ? "group-hover/btn:scale-110 transition-transform" : ""}`}>🤝</span>
+                        <span className={`font-black text-lg ${!deliverySettings.cod ? "text-[#442f2a]/50" : ""}`}>COD</span>
                       </div>
-                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "cod" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB.
+                      <p className={`text-sm font-medium leading-relaxed ${
+                          !deliverySettings.cod
+                            ? "text-[#442f2a]/40"
+                            : deliveryMethod === "cod"
+                            ? "text-[#fff7ec]/80"
+                            : "text-[#442f2a]/60"
+                        }`}>
+                        {!deliverySettings.cod ? "Metode ini sedang tidak tersedia." : "Lokasi COD di Indomaret Alun-Alun Kota Mojokerto, pukul 16.00 – 17.00 WIB."}
                       </p>
                     </button>
 
                     {/* Pick Up Option */}
                     <button
                       type="button"
+                      disabled={!deliverySettings.pickup}
                       onClick={() => setDeliveryMethod("pickup")}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.98] ${deliveryMethod === "pickup"
-                          ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg"
-                          : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a]"
+                      className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                          !deliverySettings.pickup
+                            ? "border-[#442f2a]/5 bg-[#442f2a]/5 opacity-60 cursor-not-allowed grayscale"
+                            : deliveryMethod === "pickup"
+                            ? "border-[#442f2a] bg-[#442f2a] text-[#fff7ec] shadow-lg active:scale-[0.98]"
+                            : "border-[#442f2a]/15 bg-white hover:border-[#442f2a]/30 text-[#442f2a] active:scale-[0.98]"
                         }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-2xl">🏪</span>
-                        <span className="font-black text-lg">Pick Up</span>
+                        <span className={`font-black text-lg ${!deliverySettings.pickup ? "text-[#442f2a]/50" : ""}`}>Pick Up</span>
                       </div>
-                      <p className={`text-sm font-medium leading-relaxed ${deliveryMethod === "pickup" ? "text-[#fff7ec]/80" : "text-[#442f2a]/60"}`}>
-                        Ambil pesanan sendiri di tempat (09.00 - 15.00 WIB).
+                      <p className={`text-sm font-medium leading-relaxed ${
+                          !deliverySettings.pickup
+                            ? "text-[#442f2a]/40"
+                            : deliveryMethod === "pickup"
+                            ? "text-[#fff7ec]/80"
+                            : "text-[#442f2a]/60"
+                        }`}>
+                        {!deliverySettings.pickup ? "Metode ini sedang tidak tersedia." : "Ambil pesanan sendiri di tempat (09.00 - 15.00 WIB)."}
                       </p>
                     </button>
                   </div>
@@ -921,7 +983,7 @@ export default function LandingPage() {
                     value={lookupQuery}
                     onChange={(e) => setLookupQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                    placeholder="Nomor HP..."
+                    placeholder="08123456789"
                     className="w-full pl-12 pr-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white font-medium placeholder:text-[#442f2a]/40"
                   />
                 </div>
