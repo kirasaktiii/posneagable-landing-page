@@ -355,7 +355,7 @@ export default function LandingPage() {
             Soft Baked Cookies <br className="hidden sm:block" /> <span className="text-[#f790b2] drop-shadow-sm">& Dessert</span>
           </h2>
           <p className="text-base sm:text-lg md:text-xl mb-8 sm:mb-10 text-[#442f2a]/80 max-w-2xl mx-auto leading-relaxed font-medium px-2">
-            Made by order & freshly baked
+            Made by order & Freshly Baked
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })} className="px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-full font-bold text-base hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95">
@@ -612,7 +612,7 @@ export default function LandingPage() {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="w-full px-5 py-4 rounded-2xl border-2 border-[#442f2a]/10 hover:border-[#442f2a]/20 focus:border-[#442f2a] focus:ring-4 focus:ring-[#442f2a]/10 outline-none transition-all text-[#442f2a] bg-[#fff7ec]/50 focus:bg-white resize-none font-medium placeholder:text-[#442f2a]/40"
-                      placeholder="Contoh: Tolong kreseknya dipisah"
+                      placeholder="Contoh: Tolong kreseknya dipisah ya"
                     />
                   </div>
                 </div>
@@ -651,7 +651,7 @@ export default function LandingPage() {
                             ? "text-[#fff7ec]/80"
                             : "text-[#442f2a]/60"
                         }`}>
-                        {!deliverySettings.do ? "Metode ini sedang tidak tersedia." : "Memesan kurir gosend/shopee sendiri. Jika sudah memesan, wajib membagikan lokasi kurir ke toko."}
+                        {!deliverySettings.do ? "Metode ini sedang tidak tersedia." : "Memesan kurir gosend/shopee sendiri. Jika sudah memesan, wajib membagikan link live location kurir ke toko."}
                       </p>
                     </button>
 
