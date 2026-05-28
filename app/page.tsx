@@ -720,11 +720,29 @@ export default function LandingPage() {
                   {deliveryMethod === "do" && (
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
                       <span className="text-xl shrink-0">📦</span>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-bold text-[#442f2a] text-sm mb-1">Info Delivery Order (DO)</p>
-                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed mb-3">
                           Anda harus memesan kurir secara mandiri. Mohon <span className="font-bold">wajib membagikan tautan (link) live location kurir</span> kepada pihak toko agar pesanan bisa diserahkan ke kurir yang tepat.
                         </p>
+                        <div className="bg-white/60 p-2.5 rounded-xl border border-[#442f2a]/10 flex items-center justify-between gap-3">
+                          <p className="text-xs text-[#442f2a]/80 font-medium line-clamp-2">
+                            Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText("Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364");
+                              alert("Alamat berhasil disalin!");
+                            }}
+                            className="shrink-0 w-8 h-8 flex items-center justify-center bg-white text-[#442f2a] rounded-lg shadow-sm border border-[#442f2a]/10 hover:bg-blue-100 transition-colors active:scale-95"
+                            title="Salin Alamat"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -732,11 +750,29 @@ export default function LandingPage() {
                   {deliveryMethod === "pickup" && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex gap-3 items-start">
                       <span className="text-xl shrink-0">🏪</span>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-bold text-[#442f2a] text-sm mb-1">Info Pick Up (Ambil di Tempat)</p>
-                        <p className="text-[#442f2a]/70 text-sm leading-relaxed">
+                        <p className="text-[#442f2a]/70 text-sm leading-relaxed mb-3">
                           Anda bisa mengambil pesanannya sendiri. Jam operasional untuk pick up adalah dari pukul <span className="font-bold">09:00 WIB hingga 15:00 WIB</span>.
                         </p>
+                        <div className="bg-white/60 p-2.5 rounded-xl border border-[#442f2a]/10 flex items-center justify-between gap-3">
+                          <p className="text-xs text-[#442f2a]/80 font-medium line-clamp-2">
+                            Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText("Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364");
+                              alert("Alamat berhasil disalin!");
+                            }}
+                            className="shrink-0 w-8 h-8 flex items-center justify-center bg-white text-[#442f2a] rounded-lg shadow-sm border border-[#442f2a]/10 hover:bg-emerald-100 transition-colors active:scale-95"
+                            title="Salin Alamat"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1145,41 +1181,62 @@ export default function LandingPage() {
                   className="rounded-[1.5rem] sm:rounded-[2.5rem]"
                 ></iframe>
               </div>
-              <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi Pick-Up & DO Naegablé</h4>
-                  <p className="text-[#442f2a]/60 text-sm font-medium">Koordinat: -7.4510, 112.4676</p>
+              <div className="p-5 sm:p-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+                  <div>
+                    <h4 className="font-black text-[#442f2a] text-lg sm:text-xl mb-1">📍 Lokasi Pick-Up & DO Naegablé</h4>
+                    <p className="text-[#442f2a]/60 text-xs font-medium">Koordinat: -7.4510, 112.4676</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href="https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-xl font-bold text-sm hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Buka di Google Maps
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
+                        const shareText = "📍 Lokasi Pick-Up & DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
+                        if (navigator.share) {
+                          navigator.share({ title: "Lokasi Pick-Up & DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
+                        } else {
+                          navigator.clipboard.writeText(shareText);
+                          alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
+                        }
+                      }}
+                      className="w-11 h-11 flex items-center justify-center bg-[#f5cbd7] text-[#442f2a] rounded-xl hover:bg-[#eeb1c3] transition-all active:scale-95 border border-[#442f2a]/20"
+                      title="Share ke Kurir"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <a
-                    href="https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#442f2a] text-[#fff7ec] rounded-xl font-bold text-sm hover:bg-[#2e1d1a] transition-all hover:shadow-lg active:scale-95"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Buka di Google Maps
-                  </a>
+                
+                <div className="w-full bg-[#fff7ec]/50 p-3 sm:p-4 rounded-xl border border-[#442f2a]/10 flex items-center justify-between gap-3">
+                  <p className="text-xs sm:text-sm text-[#442f2a]/80 font-medium">
+                    Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364
+                  </p>
                   <button
                     type="button"
                     onClick={() => {
-                      const shareUrl = "https://www.google.com/maps/dir/?api=1&destination=-7.451004745649361,112.46758141671499";
-                      const shareText = "📍 Lokasi Pick-Up & DO Naegablé - Titik pengambilan pesanan:\n" + shareUrl;
-                      if (navigator.share) {
-                        navigator.share({ title: "Lokasi Pick-Up & DO Naegablé", text: "📍 Titik pengambilan pesanan Naegablé", url: shareUrl });
-                      } else {
-                        navigator.clipboard.writeText(shareText);
-                        alert("Link lokasi berhasil disalin! Kirimkan ke kurir Anda.");
-                      }
+                      navigator.clipboard.writeText("Perumahan Mutiara Garden Blok A11 Lengkong, Mojoanyar, Mojokerto, KAB. MOJOKERTO, MOJOANYAR, JAWA TIMUR, ID, 61364");
+                      alert("Alamat berhasil disalin!");
                     }}
-                    className="w-11 h-11 flex items-center justify-center bg-[#f5cbd7] text-[#442f2a] rounded-xl hover:bg-[#eeb1c3] transition-all active:scale-95 border border-[#442f2a]/20"
-                    title="Share ke Kurir"
+                    className="shrink-0 w-10 h-10 flex items-center justify-center bg-white text-[#442f2a] rounded-lg shadow-sm border border-[#442f2a]/10 hover:bg-[#f5cbd7] transition-colors active:scale-95"
+                    title="Salin Alamat"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </button>
                 </div>
@@ -1190,7 +1247,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#fff7ec] py-12 text-center">
+      <footer className="bg-[#fff7ec] py-12 text-center border-t border-[#442f2a]/5">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-center gap-3 mb-6">
             <img
